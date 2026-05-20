@@ -465,7 +465,7 @@ function clearAllData() {
     return;
   }
 
-  const confirmed = confirm('Delete all student records from the table? This cannot be undone.');
+  const confirmed = confirm('Are you sure you want to permanently delete ALL student data?');
   if (!confirmed) return;
 
   students = [];
