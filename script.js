@@ -247,12 +247,7 @@ function escapeXml(value) {
     .replace(/'/g, '&apos;');
 }
 
-function exportXML() {
-  if (students.length === 0) {
-    showToast('No students to export!', true);
-    return;
-  }
-
+function getXmlExportString() {
   const rows = getVisibleStudents().map(student => `
     <student>
       <nicNo>${escapeXml(student.nic)}</nicNo>
@@ -265,7 +260,11 @@ function exportXML() {
       <total>${student.total}</total>
     </student>`).join('');
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<students>${rows}\n</students>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<students>${rows}\n</students>`;
+}
+
+function exportXML() {
+  const xml = getXmlExportString();
   const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -274,6 +273,25 @@ function exportXML() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('XML exported using current sort state!');
+}
+
+function openExportXmlModal() {
+  if (students.length === 0) {
+    showToast('No students to export!', true);
+    return;
+  }
+
+  document.getElementById('exportXmlPreview').textContent = getXmlExportString();
+  document.getElementById('exportOverlay').classList.add('open');
+}
+
+function closeExportOverlay() {
+  document.getElementById('exportOverlay').classList.remove('open');
+}
+
+function downloadExportXml() {
+  exportXML();
+  closeExportOverlay();
 }
 
 function exportCSV() {
@@ -546,6 +564,15 @@ function setupGradeModalEvents() {
   });
 }
 
+function setupExportModalEvents() {
+  document.getElementById('exportClose').addEventListener('click', closeExportOverlay);
+  document.getElementById('exportCancelBtn').addEventListener('click', closeExportOverlay);
+  document.getElementById('confirmExportXmlBtn').addEventListener('click', downloadExportXml);
+  document.getElementById('exportOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('exportOverlay')) closeExportOverlay();
+  });
+}
+
 function setupSearchAndFilter() {
   document.getElementById('searchInput').addEventListener('input', e => {
     searchQuery = e.target.value;
@@ -583,7 +610,6 @@ function setupButtons() {
   document.getElementById('addStudentBtn').addEventListener('click', openAddModal);
   document.getElementById('sortViewBtn').addEventListener('click', toggleSortView);
   document.getElementById('exportBtn').addEventListener('click', exportCSV);
-  document.getElementById('xmlExportBtn').addEventListener('click', exportXML);
   document.getElementById('deleteAllBtn').addEventListener('click', clearAllData);
   document.getElementById('saveBtn').addEventListener('click', saveStudent);
 }
@@ -599,6 +625,7 @@ function initialize() {
   setupFormEnterSubmit();
   setupSearchAndFilter();
   setupGradeModalEvents();
+  setupExportModalEvents();
 
   window.addEventListener('resize', updateTabIndicator);
   document.addEventListener('keydown', e => {

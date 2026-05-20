@@ -49,9 +49,6 @@
         <button class="btn btn-secondary" id="exportBtn">
           <i class="fas fa-download"></i> Export CSV
         </button>
-        <button class="btn btn-secondary" id="xmlExportBtn">
-          <i class="fas fa-file-code"></i> Export XML
-        </button>
         <button class="btn btn-secondary btn-sm btn-tertiary" id="deleteAllBtn">
           <i class="fas fa-trash-alt"></i> Clear Table
         </button>
@@ -323,6 +320,29 @@
         <button class="btn btn-ghost" id="gradesCancelBtn">Cancel</button>
         <button class="btn btn-primary" id="applyGradesBtn">
           <i class="fas fa-check"></i> Apply Grades to All Students
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EXPORT XML PREVIEW MODAL ============ -->
+  <div class="modal-overlay" id="exportOverlay">
+    <div class="modal modal-md" id="exportModal">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon"><i class="fas fa-file-code"></i></div>
+          <h2>Export XML</h2>
+        </div>
+        <button class="modal-close" id="exportClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Preview the XML generated from the current table view. When ready, download the file.</p>
+        <pre class="xml-preview" id="exportXmlPreview"></pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="exportCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="confirmExportXmlBtn">
+          <i class="fas fa-download"></i> Download XML
         </button>
       </div>
     </div>
