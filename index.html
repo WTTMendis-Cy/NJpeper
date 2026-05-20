@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paper Marking System</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+  <!-- Background Grid -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
+      <div class="header-text">
+        <h1 class="site-title">MarkMaster</h1>
+        <span class="site-sub">Paper Marking System</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="stat-pill" id="totalStudents">
+        <i class="fas fa-users"></i>
+        <span id="studentCount">0</span> Students
+      </div>
+      <div class="stat-pill highlight" id="topScorePill">
+        <i class="fas fa-trophy"></i>
+        Top: <span id="topScore">—</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Search by name or index..." autocomplete="off"/>
+      </div>
+      <div class="controls-right">
+        <button class="btn btn-secondary" id="exportBtn">
+          <i class="fas fa-download"></i> Export CSV
+        </button>
+        <button class="btn btn-primary" id="addStudentBtn">
+          <i class="fas fa-plus"></i> Add Student
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-label">Total Students</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon gold"><i class="fas fa-trophy"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" id="statHighest">—</span>
+          <span class="stat-label">Highest Mark</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-chart-line"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" id="statAvg">—</span>
+          <span class="stat-label">Class Average</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-arrow-down"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" id="statLowest">—</span>
+          <span class="stat-label">Lowest Mark</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="table-wrapper">
+      <div class="table-header-row">
+        <h2 class="table-title"><i class="fas fa-list-ol"></i> Rankings</h2>
+        <span class="auto-badge"><i class="fas fa-bolt"></i> Auto Sorted</span>
+      </div>
+
+      <div class="table-scroll">
+        <table class="marks-table" id="marksTable">
+          <thead>
+            <tr>
+              <th class="col-rank">Rank</th>
+              <th class="col-index">Index No.</th>
+              <th class="col-name">Student Name</th>
+              <th class="col-mcq">MCQ <span class="th-sub">Marks</span></th>
+              <th class="col-essay">Essay <span class="th-sub">Marks</span></th>
+              <th class="col-total">Total <span class="th-sub">Marks</span></th>
+              <th class="col-grade">Grade</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Rows injected by JS -->
+          </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon"><i class="fas fa-file-circle-plus"></i></div>
+          <h3>No Students Yet</h3>
+          <p>Click <strong>Add Student</strong> to start marking papers.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ ADD / EDIT MODAL ============ -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon"><i class="fas fa-user-pen" id="modalIcon"></i></div>
+          <h2 id="modalTitle">Add Student</h2>
+        </div>
+        <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inputIndex"><i class="fas fa-id-card"></i> Index Number</label>
+            <input type="text" id="inputIndex" placeholder="e.g. 2024/CS/001" autocomplete="off"/>
+            <span class="field-error" id="errIndex"></span>
+          </div>
+          <div class="form-group">
+            <label for="inputName"><i class="fas fa-user"></i> Student Name</label>
+            <input type="text" id="inputName" placeholder="Full Name" autocomplete="off"/>
+            <span class="field-error" id="errName"></span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inputMCQ"><i class="fas fa-circle-dot"></i> MCQ Marks</label>
+            <input type="number" id="inputMCQ" placeholder="0" min="0" max="100"/>
+            <span class="field-error" id="errMCQ"></span>
+          </div>
+          <div class="form-group">
+            <label for="inputEssay"><i class="fas fa-pen-nib"></i> Essay Marks</label>
+            <input type="number" id="inputEssay" placeholder="0" min="0" max="100"/>
+            <span class="field-error" id="errEssay"></span>
+          </div>
+        </div>
+
+        <!-- Live Total Preview -->
+        <div class="total-preview" id="totalPreview">
+          <div class="preview-label">Total Marks</div>
+          <div class="preview-value" id="previewTotal">—</div>
+          <div class="preview-grade" id="previewGrade"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveBtn">
+          <i class="fas fa-save"></i> <span id="saveBtnText">Add Student</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DELETE CONFIRM MODAL ============ -->
+  <div class="modal-overlay" id="deleteOverlay">
+    <div class="modal modal-sm" id="deleteModal">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon danger"><i class="fas fa-trash"></i></div>
+          <h2>Delete Student</h2>
+        </div>
+        <button class="modal-close" id="deleteClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="delete-msg">Are you sure you want to remove <strong id="deleteStudentName"></strong> from the list?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="deleteCancelBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn"><i class="fas fa-trash"></i> Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <i class="fas fa-check-circle toast-icon"></i>
+    <span id="toastMsg">Saved!</span>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
