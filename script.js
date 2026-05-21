@@ -3,15 +3,19 @@
    script.js
    ============================================= */
 
-const STORAGE_KEY = 'markmaster_data';
+const STORAGE_KEY = 'markmaster_v2_data';
+const FS_HANDLE_KEY = 'markmaster_fs_handle';
 
 // ===== STATE MANAGEMENT =====
 
 let appState = {
-  batches: [],
-  activeBatchId: null
+  version: '2.0',
+  lastSaved: null,
+  activeBatchId: null,
+  batches: []
 };
 
+let fileSystemHandle = null; // File System Access API handle
 let editingId = null;
 let deleteId = null;
 let deleteBatchId = null;
@@ -75,20 +79,174 @@ function getGrade(total) {
   return 'F';
 }
 
-// ===== STORAGE =====
+// ===== PERSISTENT STORAGE SYSTEM =====
 
-function loadData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
+// Restore file system handle from localStorage
+function restoreFileSystemHandle() {
+  try {
+    const handleJson = localStorage.getItem(FS_HANDLE_KEY);
+    if (handleJson) {
+      fileSystemHandle = JSON.parse(handleJson);
+    }
+  } catch (e) {
+    console.warn('Could not restore file system handle:', e);
+  }
+}
+
+// Save file system handle to localStorage
+function saveFileSystemHandle() {
+  try {
+    localStorage.setItem(FS_HANDLE_KEY, JSON.stringify(fileSystemHandle));
+  } catch (e) {
+    console.warn('Could not save file system handle:', e);
+  }
+}
+
+// Update last saved timestamp
+function updateLastSaved() {
+  appState.lastSaved = new Date().toISOString();
+  updateLastSavedDisplay();
+}
+
+// Display last saved time in UI
+function updateLastSavedDisplay() {
+  try {
+    const timeEl = document.getElementById('lastSavedTime');
+    if (!timeEl) return;
+    
+    if (!appState.lastSaved) {
+      timeEl.textContent = 'never';
+      return;
+    }
+    
+    const date = new Date(appState.lastSaved);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const mins = String(date.getMinutes()).padStart(2, '0');
+    timeEl.textContent = `${hours}:${mins}`;
+  } catch (e) {
+    console.warn('Error updating last saved display:', e);
+  }
+}
+
+// Validate data structure
+function validateAppState(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (!Array.isArray(data.batches)) return false;
+  if (!data.activeBatchId && data.batches.length > 0) {
+    data.activeBatchId = data.batches[0].id;
+  }
+  return true;
+}
+
+// PRIMARY: Save to localStorage
+function saveToLocalStorage() {
+  try {
+    updateLastSaved();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    return true;
+  } catch (e) {
+    console.error('Failed to save to localStorage:', e);
+    return false;
+  }
+}
+
+// BACKUP: Save to file using File System Access API
+async function saveToFile() {
+  if (!fileSystemHandle) {
+    showToast('File save location not selected. Use "Save to File" button.', true);
+    return false;
+  }
+
+  try {
+    const writable = await fileSystemHandle.createWritable();
+    const jsonStr = JSON.stringify(appState, null, 2);
+    await writable.write(jsonStr);
+    await writable.close();
+    showToast('💾 Saved!', false);
+    return true;
+  } catch (e) {
+    console.error('Failed to save to file:', e);
+    showToast('Error saving to file', true);
+    return false;
+  }
+}
+
+// Enhanced saveData: save to BOTH localStorage and file
+function saveData() {
+  saveToLocalStorage();
+  
+  // Also try to auto-save to file if handle exists
+  if (fileSystemHandle) {
+    saveToFile().catch(e => {
+      console.warn('Auto-save to file failed:', e);
+    });
+  }
+}
+
+// Load priority: localStorage first, then file, use newest
+async function loadData() {
+  let localData = null;
+  let fileData = null;
+
+  // Try to load from localStorage
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      localData = JSON.parse(raw);
+      if (!validateAppState(localData)) {
+        localData = null;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to parse localStorage data:', e);
+    localData = null;
+  }
+
+  // Try to restore file system handle
+  restoreFileSystemHandle();
+
+  // Try to load from file if handle exists
+  if (fileSystemHandle) {
     try {
-      appState = JSON.parse(raw);
+      const file = await fileSystemHandle.getFile();
+      const text = await file.text();
+      fileData = JSON.parse(text);
+      if (!validateAppState(fileData)) {
+        fileData = null;
+      }
     } catch (e) {
-      console.error('Failed to parse stored data:', e);
-      appState = { batches: [], activeBatchId: null };
+      console.warn('Failed to load from file:', e);
+      fileData = null;
     }
   }
 
-  // If no batches exist, create a default one
+  // Use the most recent data
+  if (localData && fileData) {
+    const localTime = new Date(localData.lastSaved || 0);
+    const fileTime = new Date(fileData.lastSaved || 0);
+    appState = fileTime > localTime ? fileData : localData;
+  } else if (localData) {
+    appState = localData;
+  } else if (fileData) {
+    appState = fileData;
+  } else {
+    // Start fresh
+    appState = {
+      version: '2.0',
+      lastSaved: null,
+      activeBatchId: null,
+      batches: []
+    };
+  }
+
+  // Ensure structure is valid
+  if (!appState.version) appState.version = '2.0';
+  if (!appState.batches) appState.batches = [];
+  if (!appState.activeBatchId && appState.batches.length > 0) {
+    appState.activeBatchId = appState.batches[0].id;
+  }
+
+  // Create default batch if none exist
   if (appState.batches.length === 0) {
     createDefaultBatch();
   }
@@ -97,10 +255,132 @@ function loadData() {
   if (!appState.activeBatchId || !getCurrentBatch()) {
     appState.activeBatchId = appState.batches[0]?.id || null;
   }
+
+  updateLastSavedDisplay();
 }
 
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+// MANUAL: Prompt user to select save location
+async function promptSaveLocation() {
+  if (!window.showSaveFilePicker) {
+    showToast('File System API not supported in this browser', true);
+    return false;
+  }
+
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: 'markmaster_data.json',
+      types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+    });
+    fileSystemHandle = handle;
+    saveFileSystemHandle();
+    showToast('✓ Save location set!');
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error('Error selecting save location:', e);
+      showToast('Error selecting save location', true);
+    }
+    return false;
+  }
+}
+
+// MANUAL: Export to file
+async function exportToFile() {
+  const success = await promptSaveLocation();
+  if (success) {
+    await saveToFile();
+  }
+}
+
+// MANUAL: Import from file
+async function importFromFile() {
+  if (!window.showOpenFilePicker) {
+    showToast('File System API not supported in this browser', true);
+    return;
+  }
+
+  try {
+    const handles = await window.showOpenFilePicker({
+      types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+    });
+    const handle = handles[0];
+    const file = await handle.getFile();
+    const text = await file.text();
+    const importedData = JSON.parse(text);
+
+    if (!validateAppState(importedData)) {
+      showToast('Invalid data file format', true);
+      return;
+    }
+
+    // Merge: keep existing data, add new batches from import
+    const newBatches = importedData.batches.filter(
+      batch => !appState.batches.find(b => b.id === batch.id)
+    );
+    
+    if (newBatches.length > 0) {
+      appState.batches.push(...newBatches);
+      showToast(`✓ Imported ${newBatches.length} batch(es)!`);
+    } else {
+      showToast('No new data to import');
+    }
+
+    saveData();
+    renderUI();
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error('Error importing file:', e);
+      showToast('Error importing file', true);
+    }
+  }
+}
+
+// MANUAL: Create timestamped backup
+async function createBackup() {
+  if (!window.showSaveFilePicker) {
+    showToast('File System API not supported in this browser', true);
+    return;
+  }
+
+  try {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = String(now.getHours()).padStart(2, '0') + '-' +
+                    String(now.getMinutes()).padStart(2, '0');
+    const filename = `markmaster_backup_${dateStr}_${timeStr}.json`;
+
+    const handle = await window.showSaveFilePicker({
+      suggestedName: filename,
+      types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+    });
+
+    const writable = await handle.createWritable();
+    const jsonStr = JSON.stringify(appState, null, 2);
+    await writable.write(jsonStr);
+    await writable.close();
+
+    showToast(`✓ Backup saved: ${filename}`);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error('Error creating backup:', e);
+      showToast('Error creating backup', true);
+    }
+  }
+}
+
+// Fallback: Download as JSON (for browsers without File System API)
+function downloadAsJSON() {
+  const dataStr = JSON.stringify(appState, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `markmaster_data_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast('✓ Downloaded!');
 }
 
 function genId() {
@@ -1041,6 +1321,25 @@ function setupButtons() {
   document.getElementById('saveBtn').addEventListener('click', saveStudent);
 }
 
+function setupPersistenceButtons() {
+  // Set up new persistence buttons
+  const saveFileBtn = document.getElementById('saveFileBtn');
+  const loadFileBtn = document.getElementById('loadFileBtn');
+  const backupBtn = document.getElementById('backupBtn');
+
+  if (saveFileBtn) {
+    saveFileBtn.addEventListener('click', exportToFile);
+  }
+
+  if (loadFileBtn) {
+    loadFileBtn.addEventListener('click', importFromFile);
+  }
+
+  if (backupBtn) {
+    backupBtn.addEventListener('click', createBackup);
+  }
+}
+
 function setupSidebarState() {
   const collapsed = localStorage.getItem('markmaster_sidebar_collapsed') === 'true';
   if (collapsed) {
@@ -1048,9 +1347,9 @@ function setupSidebarState() {
   }
 }
 
-function initialize() {
+async function initialize() {
   initSplashScreen();
-  loadData();
+  await loadData();
   setupSidebarState();
   renderUI();
   initTabs();
@@ -1062,6 +1361,7 @@ function initialize() {
   setupFormEnterSubmit();
   setupSearchAndFilter();
   setupGradeModalEvents();
+  setupPersistenceButtons();
 
   window.addEventListener('resize', updateTabIndicator);
   document.addEventListener('keydown', e => {
