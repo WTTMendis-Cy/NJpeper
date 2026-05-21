@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="si">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MarkMaster</title>
-  <link rel="stylesheet" href="style.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="style.css" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
+
 <body>
 
   <!-- Splash Screen / Loading Screen -->
@@ -97,11 +101,21 @@
     <div class="controls-bar">
       <div class="search-wrap">
         <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Search by NIC, Index, Barcode, name or school..." autocomplete="off"/>
+        <input type="text" id="searchInput" placeholder="Search by NIC, Index, Barcode, name or school..."
+          autocomplete="off" />
       </div>
       <div class="controls-right">
         <button class="btn btn-secondary" id="exportBtn">
           <i class="fas fa-download"></i> Export CSV
+        </button>
+        <button class="btn btn-secondary btn-sm" id="saveFileBtn" title="Save to file">
+          <i class="fas fa-floppy-disk"></i> Save to File
+        </button>
+        <button class="btn btn-secondary btn-sm" id="loadFileBtn" title="Load from file">
+          <i class="fas fa-folder-open"></i> Load File
+        </button>
+        <button class="btn btn-secondary btn-sm" id="backupBtn" title="Create backup">
+          <i class="fas fa-shield-halved"></i> Backup
         </button>
         <button class="btn btn-secondary btn-sm btn-tertiary" id="deleteAllBtn">
           <i class="fas fa-trash-alt"></i> Clear Table
@@ -161,7 +175,7 @@
           <div class="toggle-wrap">
             <label class="toggle-label">Top 10</label>
             <div class="toggle-switch">
-              <input type="checkbox" id="top10Toggle" class="toggle-input"/>
+              <input type="checkbox" id="top10Toggle" class="toggle-input" />
               <span class="toggle-slider"></span>
             </div>
           </div>
@@ -193,7 +207,7 @@
             <tr>
               <th class="col-nic">NIC No</th>
               <th class="col-index">Index No.</th>
-              <th class="col-barcode">Barcode No<br/><span class="th-sub">( Physics.lk )</span></th>
+              <th class="col-barcode">Barcode No<br /><span class="th-sub">( Physics.lk )</span></th>
               <th class="col-name">Name</th>
               <th class="col-school">School</th>
               <th class="col-part1">Part 1 Marks</th>
@@ -222,6 +236,8 @@
     <div class="footer-content">
       <span class="footer-text">Powered by</span>
       <span class="footer-brand"><i class="fas fa-bolt"></i> WTTMendis</span>
+      <span class="footer-divider">•</span>
+      <span class="footer-timestamp">Last saved: <span id="lastSavedTime">never</span></span>
     </div>
   </footer>
 
@@ -239,7 +255,8 @@
       <div class="modal-body">
         <div class="form-group">
           <label for="batchNameInput"><i class="fas fa-tag"></i> Batch Name</label>
-          <input type="text" id="batchNameInput" placeholder="e.g. Batch A - Colombo, 2024 Paper 1" autocomplete="off"/>
+          <input type="text" id="batchNameInput" placeholder="e.g. Batch A - Colombo, 2024 Paper 1"
+            autocomplete="off" />
           <span class="field-error" id="errBatchName"></span>
         </div>
       </div>
@@ -264,7 +281,9 @@
         <button class="modal-close" id="deleteBatchClose"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p class="delete-msg">Are you sure you want to permanently delete the batch <strong id="deleteBatchName"></strong>? This will delete all <strong id="deleteBatchStudentCount">0</strong> students in this batch.</p>
+        <p class="delete-msg">Are you sure you want to permanently delete the batch <strong
+            id="deleteBatchName"></strong>? This will delete all <strong id="deleteBatchStudentCount">0</strong>
+          students in this batch.</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="deleteBatchCancelBtn">Cancel</button>
@@ -288,12 +307,12 @@
         <div class="form-row">
           <div class="form-group">
             <label for="inputNIC"><i class="fas fa-id-card"></i> NIC No</label>
-            <input type="text" id="inputNIC" placeholder="e.g. 971234567V" autocomplete="off"/>
+            <input type="text" id="inputNIC" placeholder="e.g. 971234567V" autocomplete="off" />
             <span class="field-error" id="errNIC"></span>
           </div>
           <div class="form-group">
             <label for="inputIndex"><i class="fas fa-barcode"></i> Index No</label>
-            <input type="text" id="inputIndex" placeholder="e.g. 2024/CS/001" autocomplete="off"/>
+            <input type="text" id="inputIndex" placeholder="e.g. 2024/CS/001" autocomplete="off" />
             <span class="field-error" id="errIndex"></span>
           </div>
         </div>
@@ -301,12 +320,12 @@
         <div class="form-row">
           <div class="form-group">
             <label for="inputBarcode"><i class="fas fa-barcode"></i> Barcode No</label>
-            <input type="text" id="inputBarcode" placeholder="e.g. PHY123456" autocomplete="off"/>
+            <input type="text" id="inputBarcode" placeholder="e.g. PHY123456" autocomplete="off" />
             <span class="field-error" id="errBarcode"></span>
           </div>
           <div class="form-group">
             <label for="inputName"><i class="fas fa-user"></i> Name</label>
-            <input type="text" id="inputName" placeholder="Full Name" autocomplete="off"/>
+            <input type="text" id="inputName" placeholder="Full Name" autocomplete="off" />
             <span class="field-error" id="errName"></span>
           </div>
         </div>
@@ -314,12 +333,12 @@
         <div class="form-row">
           <div class="form-group">
             <label for="inputSchool"><i class="fas fa-school"></i> School</label>
-            <input type="text" id="inputSchool" placeholder="School Name" autocomplete="off"/>
+            <input type="text" id="inputSchool" placeholder="School Name" autocomplete="off" />
             <span class="field-error" id="errSchool"></span>
           </div>
           <div class="form-group">
             <label for="inputPart1"><i class="fas fa-circle-dot"></i> Part 1 Marks</label>
-            <input type="number" id="inputPart1" placeholder="0" min="0" max="100"/>
+            <input type="number" id="inputPart1" placeholder="0" min="0" max="100" />
             <span class="field-error" id="errPart1"></span>
           </div>
         </div>
@@ -327,7 +346,7 @@
         <div class="form-row full-row">
           <div class="form-group full-width">
             <label for="inputPart2"><i class="fas fa-pen-nib"></i> Part 2 Marks</label>
-            <input type="number" id="inputPart2" placeholder="0" min="0" max="100"/>
+            <input type="number" id="inputPart2" placeholder="0" min="0" max="100" />
             <span class="field-error" id="errPart2"></span>
           </div>
         </div>
@@ -360,7 +379,8 @@
         <button class="modal-close" id="deleteClose"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p class="delete-msg">Are you sure you want to remove <strong id="deleteStudentName"></strong> from the list?</p>
+        <p class="delete-msg">Are you sure you want to remove <strong id="deleteStudentName"></strong> from the list?
+        </p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="deleteCancelBtn">Cancel</button>
@@ -383,7 +403,8 @@
       <div class="modal-body">
         <p class="grades-info">
           <i class="fas fa-info-circle"></i>
-          Set minimum marks for each grade. When you click "Apply Grades", all students will be graded based on these boundaries.
+          Set minimum marks for each grade. When you click "Apply Grades", all students will be graded based on these
+          boundaries.
         </p>
 
         <div class="grades-grid">
@@ -392,7 +413,7 @@
               <span class="grade-badge grade-A">A</span>
               Minimum Marks for A
             </label>
-            <input type="number" id="gradeAInput" placeholder="e.g., 150" min="0" max="200"/>
+            <input type="number" id="gradeAInput" placeholder="e.g., 150" min="0" max="200" />
           </div>
 
           <div class="grade-input-group">
@@ -400,7 +421,7 @@
               <span class="grade-badge grade-B">B</span>
               Minimum Marks for B
             </label>
-            <input type="number" id="gradeBInput" placeholder="e.g., 120" min="0" max="200"/>
+            <input type="number" id="gradeBInput" placeholder="e.g., 120" min="0" max="200" />
           </div>
 
           <div class="grade-input-group">
@@ -408,7 +429,7 @@
               <span class="grade-badge grade-C">C</span>
               Minimum Marks for C
             </label>
-            <input type="number" id="gradeCInput" placeholder="e.g., 100" min="0" max="200"/>
+            <input type="number" id="gradeCInput" placeholder="e.g., 100" min="0" max="200" />
           </div>
 
           <div class="grade-input-group">
@@ -416,7 +437,7 @@
               <span class="grade-badge grade-D">D</span>
               Minimum Marks for D (or S)
             </label>
-            <input type="number" id="gradeDInput" placeholder="e.g., 70" min="0" max="200"/>
+            <input type="number" id="gradeDInput" placeholder="e.g., 70" min="0" max="200" />
           </div>
         </div>
 
@@ -446,7 +467,8 @@
         <button class="modal-close" id="exportClose"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p class="modal-description">Preview the XML generated from the current table view. When ready, download the file.</p>
+        <p class="modal-description">Preview the XML generated from the current table view. When ready, download the
+          file.</p>
         <pre class="xml-preview" id="exportXmlPreview"></pre>
       </div>
       <div class="modal-footer">
@@ -466,4 +488,5 @@
 
   <script src="script.js"></script>
 </body>
+
 </html>
