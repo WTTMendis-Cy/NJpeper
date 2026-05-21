@@ -327,6 +327,8 @@ async function exportToFile() {
 // MANUAL: Import students from JSON file (additive/merge)
 async function importFromFile() {
   try {
+    console.log('🔹 [LOAD] Starting file picker...');
+    
     // Create file input element
     const input = document.createElement('input');
     input.type = 'file';
@@ -334,42 +336,84 @@ async function importFromFile() {
 
     input.onchange = async (e) => {
       try {
+        console.log('🔹 [LOAD] File selected, reading...');
+        
         const file = e.target.files[0];
-        if (!file) return;
-
-        const text = await file.text();
-        const importedStudents = JSON.parse(text);
-
-        // Validate that it's an array of students
-        if (!Array.isArray(importedStudents)) {
-          showToast('Invalid file format. Expected JSON array of students.', true);
+        if (!file) {
+          console.warn('🔹 [LOAD] No file selected');
           return;
         }
 
+        // Step 1: Read file
+        console.log(`🔹 [LOAD] Reading file: ${file.name} (${file.size} bytes)`);
+        const text = await file.text();
+        console.log(`🔹 [LOAD] File read complete, length: ${text.length} chars`);
+
+        // Step 2: Parse JSON
+        console.log('🔹 [LOAD] Parsing JSON...');
+        let importedStudents;
+        try {
+          importedStudents = JSON.parse(text);
+        } catch (parseErr) {
+          console.error('❌ [LOAD] JSON parse error:', parseErr);
+          showToast('Error: Invalid JSON format. Make sure the file is valid.', true);
+          input.value = '';
+          return;
+        }
+
+        console.log(`🔹 [LOAD] Parsed successfully. Data type: ${typeof importedStudents}`);
+
+        // Step 3: Validate data structure
+        if (!Array.isArray(importedStudents)) {
+          console.error('❌ [LOAD] Expected array, got:', typeof importedStudents);
+          showToast('Invalid file format. Expected JSON array of students.', true);
+          input.value = '';
+          return;
+        }
+
+        console.log(`🔹 [LOAD] Validated. Array length: ${importedStudents.length} records`);
+
+        // Step 4: Get current batch
         const batch = getCurrentBatch();
         if (!batch) {
+          console.error('❌ [LOAD] No active batch found');
           showToast('No active batch to load data into', true);
+          input.value = '';
           return;
         }
 
+        console.log(`🔹 [LOAD] Active batch: "${batch.name}" (${batch.students.length} existing students)`);
+
+        // Step 5: Merge data with duplicate checking
         const existingStudents = batch.students;
         let addedCount = 0;
         let duplicateCount = 0;
+        let skipCount = 0;
 
-        // Iterate through imported students
-        importedStudents.forEach(importedStudent => {
+        console.log('🔹 [LOAD] Processing imported records...');
+
+        importedStudents.forEach((importedStudent, idx) => {
           // Validate basic fields
           if (!importedStudent.nic && !importedStudent.index) {
-            return; // Skip if no NIC or Index
+            console.warn(`🔹 [LOAD] Record ${idx} skipped: no NIC or Index`);
+            skipCount++;
+            return;
           }
 
+          // Normalize comparison values (trim and lowercase)
+          const importNic = String(importedStudent.nic || '').trim();
+          const importIndex = String(importedStudent.index || '').trim();
+
           // Check for duplicates by NIC or Index No
-          const isDuplicate = existingStudents.some(s =>
-            (importedStudent.nic && s.nic === importedStudent.nic) ||
-            (importedStudent.index && s.index === importedStudent.index)
-          );
+          const isDuplicate = existingStudents.some(s => {
+            const existingNic = String(s.nic || '').trim();
+            const existingIndex = String(s.index || '').trim();
+            return (importNic && existingNic && existingNic === importNic) ||
+                   (importIndex && existingIndex && existingIndex === importIndex);
+          });
 
           if (isDuplicate) {
+            console.warn(`🔹 [LOAD] Record ${idx} skipped: duplicate (NIC: ${importNic}, Index: ${importIndex})`);
             duplicateCount++;
             return;
           }
@@ -381,43 +425,72 @@ async function importFromFile() {
 
           const newStudent = {
             id: genId(),
-            nic: importedStudent.nic || '',
-            index: importedStudent.index || '',
-            barcode: importedStudent.barcode || '',
-            name: importedStudent.name || '',
-            school: importedStudent.school || '',
+            nic: importNic,
+            index: importIndex,
+            barcode: String(importedStudent.barcode || '').trim(),
+            name: String(importedStudent.name || '').trim(),
+            school: String(importedStudent.school || '').trim(),
             part1: part1,
             part2: part2,
             total: total
           };
 
           existingStudents.push(newStudent);
+          console.log(`✓ [LOAD] Record ${idx} added: ${newStudent.name || newStudent.nic} (Total: ${total})`);
           addedCount++;
         });
 
-        // Show result message
+        console.log(`🔹 [LOAD] Merge complete. Added: ${addedCount}, Duplicates: ${duplicateCount}, Skipped: ${skipCount}`);
+
+        // Step 6: Save to localStorage and file
         if (addedCount > 0) {
+          console.log('🔹 [LOAD] Saving to storage...');
           saveData();
+          console.log('✓ [LOAD] Saved to storage');
+
+          // Step 7: Re-render UI
+          console.log('🔹 [LOAD] Re-rendering table and stats...');
           renderUI();
+          console.log('✓ [LOAD] Table and stats re-rendered');
+
+          // Step 8: Show success message
           let msg = `✓ Loaded ${addedCount} student(s)!`;
           if (duplicateCount > 0) {
             msg += ` (${duplicateCount} duplicate(s) skipped)`;
           }
+          if (skipCount > 0) {
+            msg += ` (${skipCount} invalid records skipped)`;
+          }
           showToast(msg);
+          console.log('✓ [LOAD] Success message displayed');
         } else if (duplicateCount > 0) {
           showToast(`⚠ All records were duplicates. No new students added.`);
+          console.warn('🔹 [LOAD] No records added (all duplicates)');
+        } else if (skipCount > 0) {
+          showToast('No valid students found in file (all records invalid)', true);
+          console.warn('🔹 [LOAD] No valid records found');
         } else {
-          showToast('No valid students found in file', true);
+          showToast('No records to load', true);
+          console.warn('🔹 [LOAD] Empty file');
         }
-      } catch (parseErr) {
-        console.error('Error parsing file:', parseErr);
-        showToast('Error reading file. Make sure it\'s valid JSON.', true);
+
+        // Step 9: Reset file input
+        console.log('🔹 [LOAD] Resetting file input...');
+        input.value = '';
+        console.log('✓ [LOAD] File load complete!');
+
+      } catch (err) {
+        console.error('❌ [LOAD] Unexpected error:', err);
+        console.error('❌ [LOAD] Stack:', err.stack);
+        showToast('Error reading file. Check console for details.', true);
+        input.value = '';
       }
     };
 
     input.click();
+    console.log('✓ [LOAD] File picker opened');
   } catch (e) {
-    console.error('Error opening file picker:', e);
+    console.error('❌ [LOAD] Error opening file picker:', e);
     showToast('Error opening file picker', true);
   }
 }
@@ -1109,6 +1182,32 @@ function toggleSidebar() {
   localStorage.setItem('markmaster_sidebar_collapsed', sidebar.classList.contains('collapsed'));
 }
 
+// ===== THEME MANAGEMENT =====
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('markmaster_theme') || 'dark';
+  setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+  const root = document.documentElement;
+  
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+    localStorage.setItem('markmaster_theme', 'light');
+  } else {
+    root.removeAttribute('data-theme');
+    localStorage.setItem('markmaster_theme', 'dark');
+  }
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const currentTheme = root.getAttribute('data-theme') || 'dark';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  setTheme(newTheme);
+}
+
 function switchBatchAndRender(batchId) {
   switchBatch(batchId);
   renderUI();
@@ -1406,6 +1505,12 @@ function setupButtons() {
   document.getElementById('exportBtn').addEventListener('click', exportCSV);
   document.getElementById('deleteAllBtn').addEventListener('click', clearAllData);
   document.getElementById('saveBtn').addEventListener('click', saveStudent);
+  
+  // Theme toggle button
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', toggleTheme);
+  }
 }
 
 function setupPersistenceButtons() {
@@ -1438,6 +1543,7 @@ async function initialize() {
   initSplashScreen();
   await loadData();
   setupSidebarState();
+  initTheme();
   renderUI();
   initTabs();
   setupButtons();
