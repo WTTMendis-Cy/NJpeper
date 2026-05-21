@@ -552,6 +552,26 @@ body {
   animation: shine 2s ease-in-out infinite;
 }
 
+.footer-divider {
+  color: var(--text3);
+  font-size: 12px;
+  opacity: 0.4;
+  margin: 0 8px;
+}
+
+.footer-timestamp {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+#lastSavedTime {
+  color: #00ff80;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
 /* -- Header - Grid placement -------------------- */
 .header {
   grid-row: 1;

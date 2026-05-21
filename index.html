@@ -103,6 +103,15 @@
         <button class="btn btn-secondary" id="exportBtn">
           <i class="fas fa-download"></i> Export CSV
         </button>
+        <button class="btn btn-secondary btn-sm" id="saveFileBtn" title="Save to file">
+          <i class="fas fa-floppy-disk"></i> Save to File
+        </button>
+        <button class="btn btn-secondary btn-sm" id="loadFileBtn" title="Load from file">
+          <i class="fas fa-folder-open"></i> Load File
+        </button>
+        <button class="btn btn-secondary btn-sm" id="backupBtn" title="Create backup">
+          <i class="fas fa-shield-halved"></i> Backup
+        </button>
         <button class="btn btn-secondary btn-sm btn-tertiary" id="deleteAllBtn">
           <i class="fas fa-trash-alt"></i> Clear Table
         </button>
@@ -222,6 +231,8 @@
     <div class="footer-content">
       <span class="footer-text">Powered by</span>
       <span class="footer-brand"><i class="fas fa-bolt"></i> WTTMendis</span>
+      <span class="footer-divider">•</span>
+      <span class="footer-timestamp">Last saved: <span id="lastSavedTime">never</span></span>
     </div>
   </footer>
 
