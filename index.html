@@ -7,8 +7,300 @@
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  
+  <style>
+    /* ========================================
+       LAYOUT & ANIMATION FIXES - COMPREHENSIVE
+       ======================================== */
+
+    /* Root Layout: Flexbox Structure */
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      display: flex;
+      flex-direction: row;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* App Layout Container */
+    body {
+      --sidebar-width: 260px;
+      --sidebar-collapsed-width: 60px;
+      --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ===== SIDEBAR LAYOUT ===== */
+    .sidebar {
+      width: var(--sidebar-width) !important;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      z-index: 100;
+      position: relative;
+      transform: translateX(0);
+      transition: 
+        width 0.3s var(--transition-timing),
+        transform 0.3s var(--transition-timing),
+        background 0.3s ease,
+        border-right-color 0.3s ease;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+      animation: none;
+    }
+
+    /* Collapsed Sidebar - Icon Only Mode */
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed-width) !important;
+    }
+
+    /* Hidden Sidebar - Mobile/Fully Closed */
+    .sidebar.hidden {
+      transform: translateX(-100%);
+    }
+
+    /* Sidebar Toggle Button - Smooth Icon Rotation */
+    .sidebar-toggle {
+      transition: all 0.3s var(--transition-timing) !important;
+      transform: rotate(0deg) !important;
+    }
+
+    .sidebar-toggle.rotated {
+      transform: rotate(180deg) !important;
+    }
+
+    .sidebar-toggle:hover {
+      transform: rotate(180deg) !important;
+    }
+
+    /* Hide Text in Collapsed Mode */
+    .sidebar-title,
+    .batch-btn-text,
+    .batch-item-name,
+    .theme-label {
+      transition: 
+        opacity 0.2s ease,
+        width 0.3s var(--transition-timing),
+        transform 0.3s var(--transition-timing);
+    }
+
+    .sidebar.collapsed .sidebar-title,
+    .sidebar.collapsed .batch-btn-text,
+    .sidebar.collapsed .batch-item-name,
+    .sidebar.collapsed .theme-label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      transform: scaleX(0);
+      transform-origin: left;
+      pointer-events: none;
+    }
+
+    /* Center Icons in Collapsed Mode */
+    .sidebar.collapsed .batch-item-content {
+      justify-content: center;
+    }
+
+    .sidebar.collapsed .batch-item-badge,
+    .sidebar.collapsed .batch-item-actions {
+      display: none !important;
+    }
+
+    /* Tooltips for Collapsed Icons */
+    .sidebar.collapsed [title] {
+      position: relative;
+    }
+
+    .sidebar.collapsed [title]::before {
+      content: attr(title);
+      position: absolute;
+      left: 100%;
+      margin-left: 8px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 1000;
+      display: none;
+    }
+
+    .sidebar.collapsed [title]:hover::before {
+      opacity: 1;
+      display: block;
+    }
+
+    /* ===== MAIN CONTENT LAYOUT ===== */
+    .app-wrapper {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      height: 100vh;
+      overflow: hidden;
+      transition: margin-left 0.3s var(--transition-timing);
+    }
+
+    body:not(.mobile-sidebar-open) .app-wrapper {
+      margin-left: 0;
+    }
+
+    /* Header */
+    .header {
+      flex-shrink: 0;
+      z-index: 50;
+      margin-left: 0 !important;
+      grid-column: unset !important;
+      grid-row: unset !important;
+    }
+
+    /* Main Container */
+    .main-container {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      grid-column: unset !important;
+      grid-row: unset !important;
+      width: 100% !important;
+      margin: 0 !important;
+      transition: all 0.3s var(--transition-timing);
+      padding: 32px 24px 100px;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    
+    /* Batch Items - Staggered Fade In */
+    @keyframes fadeInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .batch-item {
+      animation: fadeInLeft 0.3s ease forwards !important;
+      opacity: 1 !important;
+    }
+
+    .batch-item:nth-child(1) { animation-delay: 0ms !important; }
+    .batch-item:nth-child(2) { animation-delay: 50ms !important; }
+    .batch-item:nth-child(3) { animation-delay: 100ms !important; }
+    .batch-item:nth-child(4) { animation-delay: 150ms !important; }
+    .batch-item:nth-child(5) { animation-delay: 200ms !important; }
+    .batch-item:nth-child(n+6) { animation-delay: 250ms !important; }
+
+    /* New Batch Button - Pulse Animation on Hover */
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .btn-new-batch:active {
+      animation: pulse 0.6s ease;
+    }
+
+    /* ===== MOBILE RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform 0.3s var(--transition-timing);
+      }
+
+      .sidebar.mobile-open {
+        transform: translateX(0);
+      }
+
+      .sidebar.hidden {
+        transform: translateX(-100%) !important;
+      }
+
+      /* Mobile Overlay/Backdrop */
+      .mobile-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 150;
+      }
+
+      body.mobile-sidebar-open .mobile-overlay {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .app-wrapper {
+        width: 100%;
+        height: 100vh;
+        margin-left: 0 !important;
+      }
+
+      .header {
+        width: 100%;
+      }
+
+      .main-container {
+        width: 100% !important;
+        margin: 0 !important;
+      }
+    }
+
+    /* ===== REMOVE GRID LAYOUT FROM STYLE.CSS ===== */
+    body.no-grid {
+      display: flex;
+      grid-template-columns: unset;
+      grid-template-rows: unset;
+    }
+
+    .no-grid .sidebar {
+      grid-column: unset;
+      grid-row: unset;
+    }
+
+    .no-grid .header {
+      grid-column: unset;
+      grid-row: unset;
+    }
+
+    .no-grid .main-container {
+      grid-column: unset;
+      grid-row: unset;
+    }
+  </style>
 </head>
-<body>
+<body class="no-grid">
 
   <!-- Splash Screen / Loading Screen -->
   <div class="splash-screen" id="splashScreen">
@@ -44,6 +336,9 @@
   <div class="bg-glow glow-1"></div>
   <div class="bg-glow glow-2"></div>
 
+  <!-- Mobile Overlay for Sidebar -->
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+
   <!-- Sidebar Navigation -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -72,35 +367,37 @@
     </div>
   </aside>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="header-left">
-      <div class="logo-icon">
-        <span class="logo-n">N</span><span class="logo-j">J</span>
-      </div>
-      <div class="header-text">
-        <h1 class="site-title">NJ-StudentData</h1>
-        <span class="site-sub" id="batchContext">Paper Marking System</span>
-        <div class="current-batch-display" id="currentBatchDisplay">
-          <i class="fas fa-folder-open"></i>
-          <span id="currentBatchName">Default Batch</span>
+  <!-- App Wrapper: Contains Header + Main Content -->
+  <div class="app-wrapper">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-icon">
+          <span class="logo-n">N</span><span class="logo-j">J</span>
+        </div>
+        <div class="header-text">
+          <h1 class="site-title">NJ-StudentData</h1>
+          <span class="site-sub" id="batchContext">Paper Marking System</span>
+          <div class="current-batch-display" id="currentBatchDisplay">
+            <i class="fas fa-folder-open"></i>
+            <span id="currentBatchName">Default Batch</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="header-right">
-      <div class="stat-pill" id="totalStudents">
-        <i class="fas fa-users"></i>
-        <span id="studentCount">0</span> Students
+      <div class="header-right">
+        <div class="stat-pill" id="totalStudents">
+          <i class="fas fa-users"></i>
+          <span id="studentCount">0</span> Students
+        </div>
+        <div class="stat-pill highlight" id="topScorePill">
+          <i class="fas fa-trophy"></i>
+          Top: <span id="topScore">—</span>
+        </div>
       </div>
-      <div class="stat-pill highlight" id="topScorePill">
-        <i class="fas fa-trophy"></i>
-        Top: <span id="topScore">—</span>
-      </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- Main Container -->
-  <main class="main-container">
+    <!-- Main Container -->
+    <main class="main-container">
 
     <!-- Controls Bar -->
     <div class="controls-bar">
@@ -234,6 +531,7 @@
       </div>
     </div>
   </main>
+  </div><!-- End app-wrapper -->
 
   <!-- Page Footer -->
   <footer class="page-footer">
@@ -474,6 +772,28 @@
         <button class="btn btn-primary" id="confirmExportXmlBtn">
           <i class="fas fa-download"></i> Download XML
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load File Options Modal -->
+  <div class="modal-overlay" id="loadOptionsOverlay">
+    <div class="modal modal-md" id="loadOptionsModal">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon"><i class="fas fa-folder-open"></i></div>
+          <h2>Load Student Data</h2>
+        </div>
+        <button class="modal-close" id="loadOptionsClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Choose where to load student data from:</p>
+        <div id="loadOptionsContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+          <!-- Option A will be inserted here if localStorage data exists -->
+          <button class="btn btn-secondary" id="loadFromFileBtn" style="width: 100%; justify-content: center;">
+            <i class="fas fa-file-import"></i> Load from File
+          </button>
+        </div>
       </div>
     </div>
   </div>

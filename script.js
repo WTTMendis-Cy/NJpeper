@@ -284,6 +284,87 @@ async function promptSaveLocation() {
   }
 }
 
+// ===== BATCH-SPECIFIC LOCALSTORAGE HELPERS =====
+
+// Format datetime as YYYY-MM-DD_HH-MM
+function formatDateTimeForFileName() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const date = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const mins = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${date}_${hours}-${mins}`;
+}
+
+// Get localStorage key for a batch
+function getBatchStorageKey(batchName) {
+  return `markmaster_batch_${batchName}`;
+}
+
+// Save batch students to localStorage
+function saveBatchToLocalStorage(batchName, students) {
+  try {
+    const key = getBatchStorageKey(batchName);
+    const data = {
+      batchName: batchName,
+      students: students,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(key, JSON.stringify(data));
+    console.log(`✓ [BATCH] Saved ${students.length} students for batch "${batchName}" to localStorage`);
+    return true;
+  } catch (e) {
+    console.error('Error saving batch to localStorage:', e);
+    return false;
+  }
+}
+
+// Load batch students from localStorage
+function loadBatchFromLocalStorage(batchName) {
+  try {
+    const key = getBatchStorageKey(batchName);
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      console.warn(`⚠ [BATCH] No localStorage data found for batch "${batchName}"`);
+      return null;
+    }
+
+    const data = JSON.parse(raw);
+    if (!data.students || !Array.isArray(data.students)) {
+      console.warn(`⚠ [BATCH] Invalid data structure for batch "${batchName}"`);
+      return null;
+    }
+
+    console.log(`✓ [BATCH] Loaded ${data.students.length} students for batch "${batchName}" from localStorage`);
+    return data;
+  } catch (e) {
+    console.error('Error loading batch from localStorage:', e);
+    return null;
+  }
+}
+
+// Check if batch data exists in localStorage and get info
+function getBatchLocalStorageInfo(batchName) {
+  try {
+    const key = getBatchStorageKey(batchName);
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return null;
+    }
+
+    const data = JSON.parse(raw);
+    return {
+      batchName: batchName,
+      studentCount: data.students ? data.students.length : 0,
+      savedAt: data.savedAt ? new Date(data.savedAt).toLocaleString() : 'Unknown'
+    };
+  } catch (e) {
+    console.error('Error getting batch localStorage info:', e);
+    return null;
+  }
+}
+
 // MANUAL: Export current batch students to JSON file
 async function exportToFile() {
   const batch = getCurrentBatch();
@@ -305,17 +386,25 @@ async function exportToFile() {
       total: s.total
     }));
 
-    // Create blob and download
+    // Create blob and download with smart filename
     const jsonStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `students_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    
+    // Smart filename: BatchName_YYYY-MM-DD_HH-MM.json
+    const dateTime = formatDateTimeForFileName();
+    const sanitizedBatchName = batch.name.replace(/[^a-z0-9_-]/gi, '').substring(0, 30);
+    link.download = `${sanitizedBatchName}_${dateTime}.json`;
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    // Also save to localStorage
+    saveBatchToLocalStorage(batch.name, batch.students);
 
     showToast(`✓ Exported ${batch.students.length} student(s)!`);
   } catch (e) {
@@ -324,8 +413,13 @@ async function exportToFile() {
   }
 }
 
-// MANUAL: Import students from JSON file (additive/merge)
+// MANUAL: Show load options modal (entry point from Load File button)
 async function importFromFile() {
+  openLoadOptionsModal();
+}
+
+// MANUAL: Import students from JSON file (direct file import)
+async function importFromFileDirectly() {
   try {
     console.log('🔹 [LOAD] Starting file picker...');
     
@@ -446,6 +540,10 @@ async function importFromFile() {
         if (addedCount > 0) {
           console.log('🔹 [LOAD] Saving to storage...');
           saveData();
+          const batch = getCurrentBatch();
+          if (batch) {
+            saveBatchToLocalStorage(batch.name, batch.students);
+          }
           console.log('✓ [LOAD] Saved to storage');
 
           // Step 7: Re-render UI
@@ -454,9 +552,9 @@ async function importFromFile() {
           console.log('✓ [LOAD] Table and stats re-rendered');
 
           // Step 8: Show success message
-          let msg = `✓ Loaded ${addedCount} student(s)!`;
+          let msg = `✅ Loaded ${addedCount} student(s) from File`;
           if (duplicateCount > 0) {
-            msg += ` (${duplicateCount} duplicate(s) skipped)`;
+            msg += `. ${duplicateCount} duplicate(s) skipped.`;
           }
           if (skipCount > 0) {
             msg += ` (${skipCount} invalid records skipped)`;
@@ -604,8 +702,28 @@ function deleteBatch(batchId) {
 
 function switchBatch(batchId) {
   if (appState.batches.find(b => b.id === batchId)) {
+    // Auto-save current batch to localStorage before switching
+    const currentBatch = getCurrentBatch();
+    if (currentBatch) {
+      console.log(`💾 [SWITCH] Auto-saving current batch "${currentBatch.name}"...`);
+      saveBatchToLocalStorage(currentBatch.name, currentBatch.students);
+    }
+
     appState.activeBatchId = batchId;
     saveData();
+
+    // Auto-load new batch from localStorage if available
+    const newBatch = getCurrentBatch();
+    if (newBatch) {
+      console.log(`💾 [SWITCH] Auto-loading batch "${newBatch.name}" from localStorage...`);
+      const loadedData = loadBatchFromLocalStorage(newBatch.name);
+      if (loadedData && loadedData.students && loadedData.students.length > 0) {
+        console.log(`💾 [SWITCH] Loaded ${loadedData.students.length} students from localStorage`);
+        newBatch.students = loadedData.students;
+        saveData();
+      }
+    }
+
     resetFilters();
     renderUI();
   }
@@ -667,6 +785,7 @@ function addStudent(nic, index, barcode, name, school, part1, part2) {
 
   batch.students.push(student);
   saveData();
+  saveBatchToLocalStorage(batch.name, batch.students);
 }
 
 function updateStudent(studentId, nic, index, barcode, name, school, part1, part2) {
@@ -684,6 +803,7 @@ function updateStudent(studentId, nic, index, barcode, name, school, part1, part
     student.part2 = part2;
     student.total = part1 + part2;
     saveData();
+    saveBatchToLocalStorage(batch.name, batch.students);
   }
 }
 
@@ -693,6 +813,7 @@ function deleteStudentFromBatch(studentId) {
 
   batch.students = batch.students.filter(s => s.id !== studentId);
   saveData();
+  saveBatchToLocalStorage(batch.name, batch.students);
 }
 
 function clearAllStudents() {
@@ -701,6 +822,7 @@ function clearAllStudents() {
 
   batch.students = [];
   saveData();
+  saveBatchToLocalStorage(batch.name, batch.students);
 }
 
 function updateGradeBoundaries(a, b, c, d) {
@@ -910,6 +1032,146 @@ function openDeleteBatchModal(batchId) {
 function closeDeleteBatchModal() {
   document.getElementById('deleteBatchOverlay').classList.remove('open');
   deleteBatchId = null;
+}
+
+// Load Options Modal Functions
+function openLoadOptionsModal() {
+  const batch = getCurrentBatch();
+  if (!batch) return;
+
+  const container = document.getElementById('loadOptionsContainer');
+  container.innerHTML = '';
+
+  // Check if localStorage data exists for this batch
+  const localStorageInfo = getBatchLocalStorageInfo(batch.name);
+
+  // Add localStorage option if data exists
+  if (localStorageInfo) {
+    const localStorageBtn = document.createElement('button');
+    localStorageBtn.className = 'btn btn-secondary';
+    localStorageBtn.style.width = '100%';
+    localStorageBtn.style.justifyContent = 'flex-start';
+    localStorageBtn.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+        <i class="fas fa-database" style="font-size: 16px;"></i>
+        <div style="text-align: left; flex: 1;">
+          <div style="font-weight: 500;">Load from LocalStorage</div>
+          <div style="font-size: 12px; opacity: 0.7; margin-top: 2px;">${localStorageInfo.studentCount} student(s) • ${localStorageInfo.savedAt}</div>
+        </div>
+      </div>
+    `;
+    localStorageBtn.onclick = loadFromLocalStorage;
+    container.appendChild(localStorageBtn);
+  }
+
+  // Add file option
+  const fileBtn = document.getElementById('loadFromFileBtn');
+  fileBtn.onclick = () => {
+    closeLoadOptionsModal();
+    importFromFileDirectly();
+  };
+
+  document.getElementById('loadOptionsOverlay').classList.add('open');
+}
+
+function closeLoadOptionsModal() {
+  document.getElementById('loadOptionsOverlay').classList.remove('open');
+}
+
+// Load from LocalStorage
+async function loadFromLocalStorage() {
+  const batch = getCurrentBatch();
+  if (!batch) {
+    showToast('No active batch', true);
+    return;
+  }
+
+  try {
+    console.log(`🔹 [LOCAL] Loading data from localStorage for batch "${batch.name}"...`);
+    
+    const localData = loadBatchFromLocalStorage(batch.name);
+    if (!localData || !localData.students) {
+      showToast('No saved data found for this batch', true);
+      return;
+    }
+
+    const importedStudents = localData.students;
+    const existingStudents = batch.students;
+    let addedCount = 0;
+    let duplicateCount = 0;
+
+    console.log(`🔹 [LOCAL] Processing ${importedStudents.length} records from localStorage...`);
+
+    importedStudents.forEach((importedStudent, idx) => {
+      // Validate basic fields
+      if (!importedStudent.nic && !importedStudent.index) {
+        return;
+      }
+
+      // Normalize comparison values
+      const importNic = String(importedStudent.nic || '').trim();
+      const importIndex = String(importedStudent.index || '').trim();
+
+      // Check for duplicates
+      const isDuplicate = existingStudents.some(s => {
+        const existingNic = String(s.nic || '').trim();
+        const existingIndex = String(s.index || '').trim();
+        return (importNic && existingNic && existingNic === importNic) ||
+               (importIndex && existingIndex && existingIndex === importIndex);
+      });
+
+      if (isDuplicate) {
+        console.warn(`🔹 [LOCAL] Record ${idx} skipped: duplicate`);
+        duplicateCount++;
+        return;
+      }
+
+      // Add new student
+      const part1 = parseFloat(importedStudent.part1) || 0;
+      const part2 = parseFloat(importedStudent.part2) || 0;
+      const total = part1 + part2;
+
+      const newStudent = {
+        id: genId(),
+        nic: importNic,
+        index: importIndex,
+        barcode: String(importedStudent.barcode || '').trim(),
+        name: String(importedStudent.name || '').trim(),
+        school: String(importedStudent.school || '').trim(),
+        part1: part1,
+        part2: part2,
+        total: total
+      };
+
+      existingStudents.push(newStudent);
+      console.log(`✓ [LOCAL] Record ${idx} added`);
+      addedCount++;
+    });
+
+    closeLoadOptionsModal();
+
+    if (addedCount > 0) {
+      console.log(`🔹 [LOCAL] Saving merged data...`);
+      saveData();
+      saveBatchToLocalStorage(batch.name, batch.students);
+      renderUI();
+
+      let msg = `✅ ${addedCount} student(s) loaded from LocalStorage`;
+      if (duplicateCount > 0) {
+        msg += `. ${duplicateCount} duplicate(s) skipped.`;
+      }
+      showToast(msg);
+      console.log(`✓ [LOCAL] Load complete`);
+    } else if (duplicateCount > 0) {
+      showToast(`⚠ All records were duplicates. No new students added.`);
+    } else {
+      showToast('No valid students found in saved data', true);
+    }
+  } catch (e) {
+    console.error('❌ [LOCAL] Error loading from localStorage:', e);
+    showToast('Error loading from localStorage', true);
+    closeLoadOptionsModal();
+  }
 }
 
 function openDeleteOverlay() {
@@ -1178,8 +1440,60 @@ function toggleSortView() {
 
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
-  sidebar.classList.toggle('collapsed');
-  localStorage.setItem('markmaster_sidebar_collapsed', sidebar.classList.contains('collapsed'));
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const isMobile = window.innerWidth < 768;
+  
+  if (isMobile) {
+    // Mobile: Toggle visibility with overlay
+    const body = document.body;
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    
+    body.classList.toggle('mobile-sidebar-open');
+    sidebar.classList.toggle('mobile-open');
+    
+    // Close on overlay click
+    if (mobileOverlay && !mobileOverlay.onclick) {
+      mobileOverlay.onclick = () => {
+        body.classList.remove('mobile-sidebar-open');
+        sidebar.classList.remove('mobile-open');
+      };
+    }
+  } else {
+    // Desktop: Toggle collapsed state
+    sidebar.classList.toggle('collapsed');
+    toggleBtn.classList.toggle('rotated');
+    localStorage.setItem('markmaster_sidebar_collapsed', sidebar.classList.contains('collapsed'));
+  }
+}
+
+// Handle window resize to toggle between mobile and desktop sidebar behavior
+window.addEventListener('resize', debounceResize);
+
+function debounceResize() {
+  clearTimeout(window.resizeTimeout);
+  window.resizeTimeout = setTimeout(() => {
+    const sidebar = document.getElementById('sidebar');
+    const body = document.body;
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Mobile
+      body.classList.remove('mobile-sidebar-open');
+      sidebar.classList.remove('mobile-open');
+      sidebar.classList.remove('collapsed');
+    } else {
+      // Desktop
+      body.classList.remove('mobile-sidebar-open');
+      sidebar.classList.remove('mobile-open');
+      
+      // Restore collapsed state from localStorage
+      const wasCollapsed = localStorage.getItem('markmaster_sidebar_collapsed') === 'true';
+      if (wasCollapsed) {
+        sidebar.classList.add('collapsed');
+        document.getElementById('sidebarToggle').classList.add('rotated');
+      }
+    }
+  }, 250);
 }
 
 // ===== THEME MANAGEMENT =====
@@ -1532,10 +1846,40 @@ function setupPersistenceButtons() {
   }
 }
 
+function setupLoadOptionsModalEvents() {
+  // Close button
+  const closeBtn = document.getElementById('loadOptionsClose');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeLoadOptionsModal);
+  }
+
+  // Close on overlay click
+  const overlay = document.getElementById('loadOptionsOverlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeLoadOptionsModal();
+      }
+    });
+  }
+}
+
 function setupSidebarState() {
-  const collapsed = localStorage.getItem('markmaster_sidebar_collapsed') === 'true';
-  if (collapsed) {
-    document.getElementById('sidebar').classList.add('collapsed');
+  const isMobile = window.innerWidth < 768;
+  const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.getElementById('sidebarToggle');
+  
+  if (isMobile) {
+    // Mobile: Hide sidebar by default
+    sidebar.classList.remove('collapsed');
+    toggleBtn.classList.remove('rotated');
+  } else {
+    // Desktop: Restore collapsed state from localStorage
+    const collapsed = localStorage.getItem('markmaster_sidebar_collapsed') === 'true';
+    if (collapsed) {
+      sidebar.classList.add('collapsed');
+      toggleBtn.classList.add('rotated');
+    }
   }
 }
 
@@ -1555,6 +1899,7 @@ async function initialize() {
   setupSearchAndFilter();
   setupGradeModalEvents();
   setupPersistenceButtons();
+  setupLoadOptionsModalEvents();
 
   window.addEventListener('resize', updateTabIndicator);
   document.addEventListener('keydown', e => {
@@ -1564,6 +1909,7 @@ async function initialize() {
       closeGradesModal();
       closeBatchModal();
       closeDeleteBatchModal();
+      closeLoadOptionsModal();
     }
   });
 }
