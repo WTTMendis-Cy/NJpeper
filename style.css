@@ -228,15 +228,29 @@ body {
   grid-row: 1 / -1;
   grid-column: 1;
   width: 260px;
-  background: var(--bg2);
-  border-right: 1px solid var(--border);
+  background: #f8f9fa;
+  border-right: 1px solid #e0e3e8;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 40;
   position: relative;
   /* Smooth width animation with cubic-bezier easing */
-  transition: width 350ms cubic-bezier(0.4, 0, 0.2, 1), border-right-color 350ms ease-in-out;
+  transition: width 350ms cubic-bezier(0.4, 0, 0.2, 1), border-right-color 350ms ease-in-out, background 300ms ease-in-out, box-shadow 300ms ease-in-out;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  /* Sidebar slide-in animation on load */
+  animation: sidebarSlideIn 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes sidebarSlideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .sidebar.collapsed {
@@ -248,7 +262,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e0e3e8;
   min-height: 60px;
 }
 
@@ -256,9 +270,9 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text2);
+  background: #fff;
+  border: 1px solid #e0e3e8;
+  color: #6b7280;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -269,16 +283,16 @@ body {
 }
 
 .sidebar-toggle:hover {
-  color: var(--blue);
-  border-color: var(--blue);
-  background: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: #eff6ff;
   transform: rotate(90deg);
 }
 
 .sidebar-title {
   font-size: 12px;
   font-weight: 700;
-  color: var(--text3);
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -296,7 +310,7 @@ body {
   gap: 8px;
   padding: 10px 14px;
   margin: 12px;
-  background: linear-gradient(135deg, var(--blue), #2563eb);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -309,14 +323,8 @@ body {
 }
 
 .btn-new-batch:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-  animation: gentlePulse 1.5s ease-in-out infinite;
-}
-
-@keyframes gentlePulse {
-  0%, 100% { transform: translateY(-2px) scale(1.02); }
-  50% { transform: translateY(-3px) scale(1.03); }
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
 }
 
 .btn-new-batch i {
@@ -347,12 +355,12 @@ body {
 }
 
 .batches-list::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #d1d5db;
   border-radius: 3px;
 }
 
 .batches-list::-webkit-scrollbar-thumb:hover {
-  background: var(--border2);
+  background: #9ca3af;
 }
 
 .batch-item {
@@ -368,32 +376,39 @@ body {
   transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   group: batch-item;
-  opacity: 0.9;
-  animation: fadeIn 300ms ease-in-out forwards;
+  opacity: 0;
+  animation: fadeInBatch 400ms ease-in-out forwards;
 }
 
-.batch-item:nth-child(1) { animation-delay: 0ms; }
-.batch-item:nth-child(2) { animation-delay: 30ms; }
-.batch-item:nth-child(3) { animation-delay: 60ms; }
-.batch-item:nth-child(4) { animation-delay: 90ms; }
-.batch-item:nth-child(5) { animation-delay: 120ms; }
-.batch-item:nth-child(n+6) { animation-delay: 150ms; }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
+@keyframes fadeInBatch {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
+
+.batch-item:nth-child(1) { animation-delay: 100ms; }
+.batch-item:nth-child(2) { animation-delay: 140ms; }
+.batch-item:nth-child(3) { animation-delay: 180ms; }
+.batch-item:nth-child(4) { animation-delay: 220ms; }
+.batch-item:nth-child(5) { animation-delay: 260ms; }
+.batch-item:nth-child(n+6) { animation-delay: 300ms; }
 
 .batch-item:hover {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.2);
+  background: #eff6ff;
+  border-color: #bfdbfe;
   transform: translateX(4px);
 }
 
 .batch-item.active {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: var(--blue);
+  background: #dbeafe;
+  border-color: #3b82f6;
   opacity: 1;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .batch-item-content {
@@ -406,27 +421,27 @@ body {
 
 .batch-item-icon {
   font-size: 14px;
-  color: var(--text3);
+  color: #9ca3af;
   flex-shrink: 0;
-  transition: color 0.2s;
+  transition: color 300ms ease-in-out;
 }
 
 .batch-item.active .batch-item-icon {
-  color: var(--blue);
+  color: #3b82f6;
 }
 
 .batch-item-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text2);
+  color: #4b5563;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: color 0.2s;
+  transition: color 300ms ease-in-out;
 }
 
 .batch-item.active .batch-item-name {
-  color: var(--text);
+  color: #1e40af;
   font-weight: 600;
 }
 
@@ -441,18 +456,18 @@ body {
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background: rgba(59, 130, 246, 0.15);
+  background: #e0e7ff;
   border-radius: 10px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--blue);
+  color: #3b82f6;
   flex-shrink: 0;
   font-family: var(--font-mono);
-  transition: all 0.2s;
+  transition: all 300ms ease-in-out;
 }
 
 .batch-item.active .batch-item-badge {
-  background: var(--blue);
+  background: #3b82f6;
   color: #fff;
 }
 
@@ -475,7 +490,7 @@ body {
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: var(--text3);
+  color: #9ca3af;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -485,17 +500,18 @@ body {
 }
 
 .batch-item-btn:hover {
-  color: var(--text);
-  background: rgba(59, 130, 246, 0.15);
+  color: #fff;
+  background: #3b82f6;
 }
 
 .batch-item-btn.rename:hover {
-  color: var(--blue);
+  color: #fff;
+  background: #3b82f6;
 }
 
 .batch-item-btn.delete:hover {
-  color: var(--red);
-  background: rgba(239, 68, 68, 0.15);
+  color: #fff;
+  background: #ef4444;
 }
 
 .sidebar.collapsed .batch-item-actions {
