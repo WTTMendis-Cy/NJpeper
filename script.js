@@ -20,6 +20,36 @@ let searchQuery = '';
 let showTop10 = false;
 let sortByRank = false;
 
+// ===== SPLASH SCREEN INITIALIZATION =====
+
+function initSplashScreen() {
+  const splashScreen = document.getElementById('splashScreen');
+  const loadingText = document.getElementById('splashLoadingText');
+  const loadingBar = document.getElementById('loadingBarFill');
+
+  // Update loading text at different intervals
+  const timestamps = [
+    { time: 800, text: 'Loading data...' },
+    { time: 1800, text: 'Ready!' },
+    { time: 2800, text: null } // Hide splash
+  ];
+
+  timestamps.forEach(({ time, text }) => {
+    setTimeout(() => {
+      if (text === null) {
+        // Fade out splash screen
+        splashScreen.classList.add('fade-out');
+        setTimeout(() => {
+          splashScreen.style.display = 'none';
+        }, 500);
+      } else {
+        // Update loading text
+        loadingText.textContent = text;
+      }
+    }, time);
+  });
+}
+
 // ===== DATA ACCESS HELPERS =====
 
 function getCurrentBatch() {
@@ -280,8 +310,17 @@ function renderBatchesList() {
 function updateBatchContext() {
   const batch = getCurrentBatch();
   const contextEl = document.getElementById('batchContext');
+  const batchDisplayEl = document.getElementById('currentBatchDisplay');
+  const batchNameEl = document.getElementById('currentBatchName');
+  
   if (batch) {
     contextEl.textContent = `${batch.name} (${batch.students.length} students)`;
+    batchNameEl.textContent = batch.name;
+    
+    // Trigger fade-in animation
+    batchDisplayEl.classList.remove('fade-in');
+    void batchDisplayEl.offsetWidth; // Trigger reflow
+    batchDisplayEl.classList.add('fade-in');
   }
 }
 
@@ -998,7 +1037,6 @@ function setupButtons() {
   document.getElementById('addStudentBtn').addEventListener('click', openAddModal);
   document.getElementById('sortViewBtn').addEventListener('click', toggleSortView);
   document.getElementById('exportBtn').addEventListener('click', exportCSV);
-  document.getElementById('exportAllBtn').addEventListener('click', exportAllBatches);
   document.getElementById('deleteAllBtn').addEventListener('click', clearAllData);
   document.getElementById('saveBtn').addEventListener('click', saveStudent);
 }
@@ -1011,6 +1049,7 @@ function setupSidebarState() {
 }
 
 function initialize() {
+  initSplashScreen();
   loadData();
   setupSidebarState();
   renderUI();

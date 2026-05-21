@@ -10,6 +10,35 @@
 </head>
 <body>
 
+  <!-- Splash Screen / Loading Screen -->
+  <div class="splash-screen" id="splashScreen">
+    <div class="splash-content">
+      <!-- Logo Badge -->
+      <div class="splash-logo">
+        <span class="splash-logo-n">N</span><span class="splash-logo-j">J</span>
+      </div>
+
+      <!-- App Title -->
+      <h1 class="splash-title">NJ-StudentMarks</h1>
+
+      <!-- Subtitle -->
+      <div class="splash-subtitle">DEMO VERSION</div>
+
+      <!-- Loading Bar Container -->
+      <div class="loading-bar-container">
+        <div class="loading-bar-fill" id="loadingBarFill"></div>
+      </div>
+
+      <!-- Loading Text -->
+      <div class="splash-loading-text" id="splashLoadingText">Starting up...</div>
+
+      <!-- Footer Brand -->
+      <div class="splash-footer">
+        <i class="fas fa-bolt"></i> Powered by WTTMendis
+      </div>
+    </div>
+  </div>
+
   <!-- Background Grid -->
   <div class="bg-grid"></div>
   <div class="bg-glow glow-1"></div>
@@ -43,6 +72,10 @@
       <div class="header-text">
         <h1 class="site-title">NJ-StudentData</h1>
         <span class="site-sub" id="batchContext">Paper Marking System</span>
+        <div class="current-batch-display" id="currentBatchDisplay">
+          <i class="fas fa-folder-open"></i>
+          <span id="currentBatchName">Default Batch</span>
+        </div>
       </div>
     </div>
     <div class="header-right">
@@ -67,9 +100,6 @@
         <input type="text" id="searchInput" placeholder="Search by NIC, Index, Barcode, name or school..." autocomplete="off"/>
       </div>
       <div class="controls-right">
-        <button class="btn btn-secondary btn-sm" id="exportAllBtn" title="Export all batches as ZIP">
-          <i class="fas fa-file-archive"></i> Export All
-        </button>
         <button class="btn btn-secondary" id="exportBtn">
           <i class="fas fa-download"></i> Export CSV
         </button>
@@ -186,6 +216,14 @@
       </div>
     </div>
   </main>
+
+  <!-- Page Footer -->
+  <footer class="page-footer">
+    <div class="footer-content">
+      <span class="footer-text">Powered by</span>
+      <span class="footer-brand"><i class="fas fa-bolt"></i> WTTMendis</span>
+    </div>
+  </footer>
 
   <!-- ============ NEW/EDIT BATCH MODAL ============ -->
   <div class="modal-overlay" id="batchModalOverlay">
