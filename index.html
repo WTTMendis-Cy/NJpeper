@@ -15,13 +15,34 @@
   <div class="bg-glow glow-1"></div>
   <div class="bg-glow glow-2"></div>
 
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+        <i class="fas fa-bars"></i>
+      </button>
+      <span class="sidebar-title">Batches</span>
+    </div>
+
+    <button class="btn-new-batch" id="newBatchBtn" title="Create New Batch">
+      <i class="fas fa-plus"></i>
+      <span class="batch-btn-text">New Batch</span>
+    </button>
+
+    <div class="batches-list" id="batchesList">
+      <!-- Batch items injected by JS -->
+    </div>
+  </aside>
+
   <!-- Header -->
   <header class="header">
     <div class="header-left">
-      <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
+      <div class="logo-icon">
+        <span class="logo-n">N</span><span class="logo-j">J</span>
+      </div>
       <div class="header-text">
-        <h1 class="site-title">MarkMaster</h1>
-        <span class="site-sub">Paper Marking System</span>
+        <h1 class="site-title">NJ-StudentData</h1>
+        <span class="site-sub" id="batchContext">Paper Marking System</span>
       </div>
     </div>
     <div class="header-right">
@@ -46,6 +67,9 @@
         <input type="text" id="searchInput" placeholder="Search by NIC, Index, Barcode, name or school..." autocomplete="off"/>
       </div>
       <div class="controls-right">
+        <button class="btn btn-secondary btn-sm" id="exportAllBtn" title="Export all batches as ZIP">
+          <i class="fas fa-file-archive"></i> Export All
+        </button>
         <button class="btn btn-secondary" id="exportBtn">
           <i class="fas fa-download"></i> Export CSV
         </button>
@@ -162,6 +186,54 @@
       </div>
     </div>
   </main>
+
+  <!-- ============ NEW/EDIT BATCH MODAL ============ -->
+  <div class="modal-overlay" id="batchModalOverlay">
+    <div class="modal" id="batchModal">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon"><i class="fas fa-folder-plus" id="batchModalIcon"></i></div>
+          <h2 id="batchModalTitle">Create New Batch</h2>
+        </div>
+        <button class="modal-close" id="batchModalClose"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="batchNameInput"><i class="fas fa-tag"></i> Batch Name</label>
+          <input type="text" id="batchNameInput" placeholder="e.g. Batch A - Colombo, 2024 Paper 1" autocomplete="off"/>
+          <span class="field-error" id="errBatchName"></span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="batchCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveBatchBtn">
+          <i class="fas fa-save"></i> <span id="saveBatchBtnText">Create Batch</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DELETE BATCH MODAL ============ -->
+  <div class="modal-overlay" id="deleteBatchOverlay">
+    <div class="modal modal-sm" id="deleteBatchModal">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon danger"><i class="fas fa-trash"></i></div>
+          <h2>Delete Batch</h2>
+        </div>
+        <button class="modal-close" id="deleteBatchClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="delete-msg">Are you sure you want to permanently delete the batch <strong id="deleteBatchName"></strong>? This will delete all <strong id="deleteBatchStudentCount">0</strong> students in this batch.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="deleteBatchCancelBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBatchBtn"><i class="fas fa-trash"></i> Delete Batch</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ============ ADD / EDIT MODAL ============ -->
   <div class="modal-overlay" id="modalOverlay">

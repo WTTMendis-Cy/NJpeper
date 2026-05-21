@@ -43,9 +43,274 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  transition: grid-template-columns 300ms ease-in-out;
 }
 
-/* -- Background ------------------------------- */
+/* -- Sidebar Navigation ---------------------- */
+.sidebar {
+  grid-row: 1 / -1;
+  grid-column: 1;
+  width: 260px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 40;
+  position: relative;
+  /* Smooth width animation synchronized with main content */
+  transition: width 300ms ease-in-out, border-right-color 300ms ease-in-out;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  min-height: 60px;
+}
+
+.sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  color: var(--blue);
+  border-color: var(--blue);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.sidebar-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transition: opacity 0.3s;
+}
+
+.sidebar.collapsed .sidebar-title {
+  display: none;
+}
+
+.btn-new-batch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 12px;
+  background: linear-gradient(135deg, var(--blue), #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-new-batch:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.btn-new-batch i {
+  font-size: 14px;
+}
+
+.batch-btn-text {
+  white-space: nowrap;
+  transition: opacity 0.3s;
+}
+
+.sidebar.collapsed .batch-btn-text {
+  display: none;
+}
+
+.batches-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.batches-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.batches-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.batches-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.batches-list::-webkit-scrollbar-thumb:hover {
+  background: var(--border2);
+}
+
+.batch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  group: batch-item;
+}
+
+.batch-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.batch-item.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--blue);
+}
+
+.batch-item-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.batch-item-icon {
+  font-size: 14px;
+  color: var(--text3);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.batch-item.active .batch-item-icon {
+  color: var(--blue);
+}
+
+.batch-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.batch-item.active .batch-item-name {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sidebar.collapsed .batch-item-name {
+  display: none;
+}
+
+.batch-item-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blue);
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  transition: all 0.2s;
+}
+
+.batch-item.active .batch-item-badge {
+  background: var(--blue);
+  color: #fff;
+}
+
+.batch-item-actions {
+  display: none;
+  flex-shrink: 0;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.batch-item:hover .batch-item-actions {
+  display: flex;
+  opacity: 1;
+}
+
+.batch-item-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.batch-item-btn:hover {
+  color: var(--text);
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.batch-item-btn.rename:hover {
+  color: var(--blue);
+}
+
+.batch-item-btn.delete:hover {
+  color: var(--red);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.sidebar.collapsed .batch-item-actions {
+  display: none !important;
+}
+
+/* -- Header - Grid placement -------------------- */
+.header {
+  grid-row: 1;
+  grid-column: 2;
+  transition: all 300ms ease-in-out;
+}
 .bg-grid {
   position: fixed; inset: 0;
   background-image:
@@ -75,25 +340,39 @@ body {
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 36px;
-  background: rgba(11,15,26,0.85);
+  background: linear-gradient(135deg, #0a1a0f 0%, #0f2d1a 100%);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #00ff8844;
+  box-shadow: 0 2px 20px rgba(0, 255, 100, 0.08);
 }
 
 .header-left { display: flex; align-items: center; gap: 14px; }
 
 .logo-icon {
   width: 44px; height: 44px;
-  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  background: linear-gradient(135deg, #0d4a1f 0%, #00d86f 100%);
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 0 24px var(--blue-glow);
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(0, 255, 80, 0.4);
+  font-family: var(--font-main);
+  letter-spacing: -1px;
+}
+
+.logo-n {
+  color: #ffffff;
+  margin-right: -2px;
+}
+
+.logo-j {
+  color: #00ff50;
+  margin-left: -2px;
 }
 
 .site-title {
   font-size: 22px; font-weight: 700;
-  background: linear-gradient(135deg, #fff 30%, var(--cyan));
+  background: linear-gradient(135deg, #ffffff 30%, #00ff80);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   letter-spacing: -0.5px;
 }
@@ -104,24 +383,40 @@ body {
 .stat-pill {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 16px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
+  background: rgba(0, 255, 80, 0.08);
+  border: 1px solid rgba(0, 255, 80, 0.2);
   border-radius: 999px;
-  font-size: 13px; font-weight: 500; color: var(--text2);
+  font-size: 13px; font-weight: 500; color: #00ff80;
   font-family: var(--font-mono);
+  transition: all 0.2s;
+}
+.stat-pill:hover {
+  background: rgba(0, 255, 80, 0.15);
+  border-color: rgba(0, 255, 80, 0.4);
 }
 .stat-pill.highlight {
-  border-color: rgba(245,158,11,0.3);
-  color: var(--gold);
-  background: rgba(245,158,11,0.08);
+  border-color: rgba(0, 255, 80, 0.3);
+  color: #00ff80;
+  background: rgba(0, 255, 80, 0.1);
+}
+.stat-pill.highlight:hover {
+  background: rgba(0, 255, 80, 0.18);
+  border-color: rgba(0, 255, 80, 0.5);
 }
 .stat-pill i { font-size: 12px; }
 
 /* -- Main ------------------------------------- */
 .main-container {
-  position: relative; z-index: 1;
-  max-width: 1200px; margin: 0 auto;
+  grid-row: 2;
+  grid-column: 2;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   padding: 32px 24px 60px;
+  overflow-y: auto;
+  transition: all 300ms ease-in-out;
 }
 
 /* -- Controls Bar ----------------------------- */
@@ -231,6 +526,16 @@ body {
 
 @media (max-width: 800px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .sidebar {
+    width: 60px;
+  }
+
+  .sidebar-title,
+  .batch-btn-text,
+  .batch-item-name {
+    display: none;
+  }
 }
 
 .stat-card {
