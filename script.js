@@ -284,54 +284,141 @@ async function promptSaveLocation() {
   }
 }
 
-// MANUAL: Export to file
+// MANUAL: Export current batch students to JSON file
 async function exportToFile() {
-  const success = await promptSaveLocation();
-  if (success) {
-    await saveToFile();
-  }
-}
-
-// MANUAL: Import from file
-async function importFromFile() {
-  if (!window.showOpenFilePicker) {
-    showToast('File System API not supported in this browser', true);
+  const batch = getCurrentBatch();
+  if (!batch) {
+    showToast('No active batch to save', true);
     return;
   }
 
   try {
-    const handles = await window.showOpenFilePicker({
-      types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
-    });
-    const handle = handles[0];
-    const file = await handle.getFile();
-    const text = await file.text();
-    const importedData = JSON.parse(text);
+    // Export students array with readable format
+    const exportData = batch.students.map(s => ({
+      nic: s.nic,
+      index: s.index,
+      barcode: s.barcode,
+      name: s.name,
+      school: s.school,
+      part1: s.part1,
+      part2: s.part2,
+      total: s.total
+    }));
 
-    if (!validateAppState(importedData)) {
-      showToast('Invalid data file format', true);
-      return;
-    }
+    // Create blob and download
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `students_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
-    // Merge: keep existing data, add new batches from import
-    const newBatches = importedData.batches.filter(
-      batch => !appState.batches.find(b => b.id === batch.id)
-    );
-    
-    if (newBatches.length > 0) {
-      appState.batches.push(...newBatches);
-      showToast(`✓ Imported ${newBatches.length} batch(es)!`);
-    } else {
-      showToast('No new data to import');
-    }
-
-    saveData();
-    renderUI();
+    showToast(`✓ Exported ${batch.students.length} student(s)!`);
   } catch (e) {
-    if (e.name !== 'AbortError') {
-      console.error('Error importing file:', e);
-      showToast('Error importing file', true);
-    }
+    console.error('Error exporting file:', e);
+    showToast('Error exporting file', true);
+  }
+}
+
+// MANUAL: Import students from JSON file (additive/merge)
+async function importFromFile() {
+  try {
+    // Create file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+
+    input.onchange = async (e) => {
+      try {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const text = await file.text();
+        const importedStudents = JSON.parse(text);
+
+        // Validate that it's an array of students
+        if (!Array.isArray(importedStudents)) {
+          showToast('Invalid file format. Expected JSON array of students.', true);
+          return;
+        }
+
+        const batch = getCurrentBatch();
+        if (!batch) {
+          showToast('No active batch to load data into', true);
+          return;
+        }
+
+        const existingStudents = batch.students;
+        let addedCount = 0;
+        let duplicateCount = 0;
+
+        // Iterate through imported students
+        importedStudents.forEach(importedStudent => {
+          // Validate basic fields
+          if (!importedStudent.nic && !importedStudent.index) {
+            return; // Skip if no NIC or Index
+          }
+
+          // Check for duplicates by NIC or Index No
+          const isDuplicate = existingStudents.some(s =>
+            (importedStudent.nic && s.nic === importedStudent.nic) ||
+            (importedStudent.index && s.index === importedStudent.index)
+          );
+
+          if (isDuplicate) {
+            duplicateCount++;
+            return;
+          }
+
+          // Add new student
+          const part1 = parseFloat(importedStudent.part1) || 0;
+          const part2 = parseFloat(importedStudent.part2) || 0;
+          const total = part1 + part2;
+
+          const newStudent = {
+            id: genId(),
+            nic: importedStudent.nic || '',
+            index: importedStudent.index || '',
+            barcode: importedStudent.barcode || '',
+            name: importedStudent.name || '',
+            school: importedStudent.school || '',
+            part1: part1,
+            part2: part2,
+            total: total
+          };
+
+          existingStudents.push(newStudent);
+          addedCount++;
+        });
+
+        // Show result message
+        if (addedCount > 0) {
+          saveData();
+          renderUI();
+          let msg = `✓ Loaded ${addedCount} student(s)!`;
+          if (duplicateCount > 0) {
+            msg += ` (${duplicateCount} duplicate(s) skipped)`;
+          }
+          showToast(msg);
+        } else if (duplicateCount > 0) {
+          showToast(`⚠ All records were duplicates. No new students added.`);
+        } else {
+          showToast('No valid students found in file', true);
+        }
+      } catch (parseErr) {
+        console.error('Error parsing file:', parseErr);
+        showToast('Error reading file. Make sure it\'s valid JSON.', true);
+      }
+    };
+
+    input.click();
+  } catch (e) {
+    console.error('Error opening file picker:', e);
+    showToast('Error opening file picker', true);
   }
 }
 
