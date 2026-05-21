@@ -1,306 +1,15 @@
 <!DOCTYPE html>
 <html lang="si">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MarkMaster</title>
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  
-  <style>
-    /* ========================================
-       LAYOUT & ANIMATION FIXES - COMPREHENSIVE
-       ======================================== */
-
-    /* Root Layout: Flexbox Structure */
-    html, body {
-      height: 100%;
-      width: 100%;
-    }
-
-    body {
-      display: flex;
-      flex-direction: row;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-
-    /* App Layout Container */
-    body {
-      --sidebar-width: 260px;
-      --sidebar-collapsed-width: 60px;
-      --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* ===== SIDEBAR LAYOUT ===== */
-    .sidebar {
-      width: var(--sidebar-width) !important;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-      background: var(--bg2);
-      border-right: 1px solid var(--border);
-      z-index: 100;
-      position: relative;
-      transform: translateX(0);
-      transition: 
-        width 0.3s var(--transition-timing),
-        transform 0.3s var(--transition-timing),
-        background 0.3s ease,
-        border-right-color 0.3s ease;
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
-      animation: none;
-    }
-
-    /* Collapsed Sidebar - Icon Only Mode */
-    .sidebar.collapsed {
-      width: var(--sidebar-collapsed-width) !important;
-    }
-
-    /* Hidden Sidebar - Mobile/Fully Closed */
-    .sidebar.hidden {
-      transform: translateX(-100%);
-    }
-
-    /* Sidebar Toggle Button - Smooth Icon Rotation */
-    .sidebar-toggle {
-      transition: all 0.3s var(--transition-timing) !important;
-      transform: rotate(0deg) !important;
-    }
-
-    .sidebar-toggle.rotated {
-      transform: rotate(180deg) !important;
-    }
-
-    .sidebar-toggle:hover {
-      transform: rotate(180deg) !important;
-    }
-
-    /* Hide Text in Collapsed Mode */
-    .sidebar-title,
-    .batch-btn-text,
-    .batch-item-name,
-    .theme-label {
-      transition: 
-        opacity 0.2s ease,
-        width 0.3s var(--transition-timing),
-        transform 0.3s var(--transition-timing);
-    }
-
-    .sidebar.collapsed .sidebar-title,
-    .sidebar.collapsed .batch-btn-text,
-    .sidebar.collapsed .batch-item-name,
-    .sidebar.collapsed .theme-label {
-      opacity: 0;
-      width: 0;
-      overflow: hidden;
-      transform: scaleX(0);
-      transform-origin: left;
-      pointer-events: none;
-    }
-
-    /* Center Icons in Collapsed Mode */
-    .sidebar.collapsed .batch-item-content {
-      justify-content: center;
-    }
-
-    .sidebar.collapsed .batch-item-badge,
-    .sidebar.collapsed .batch-item-actions {
-      display: none !important;
-    }
-
-    /* Tooltips for Collapsed Icons */
-    .sidebar.collapsed [title] {
-      position: relative;
-    }
-
-    .sidebar.collapsed [title]::before {
-      content: attr(title);
-      position: absolute;
-      left: 100%;
-      margin-left: 8px;
-      background: rgba(0, 0, 0, 0.9);
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      z-index: 1000;
-      display: none;
-    }
-
-    .sidebar.collapsed [title]:hover::before {
-      opacity: 1;
-      display: block;
-    }
-
-    /* ===== MAIN CONTENT LAYOUT ===== */
-    .app-wrapper {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-width: 0;
-      height: 100vh;
-      overflow: hidden;
-      transition: margin-left 0.3s var(--transition-timing);
-    }
-
-    body:not(.mobile-sidebar-open) .app-wrapper {
-      margin-left: 0;
-    }
-
-    /* Header */
-    .header {
-      flex-shrink: 0;
-      z-index: 50;
-      margin-left: 0 !important;
-      grid-column: unset !important;
-      grid-row: unset !important;
-    }
-
-    /* Main Container */
-    .main-container {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      grid-column: unset !important;
-      grid-row: unset !important;
-      width: 100% !important;
-      margin: 0 !important;
-      transition: all 0.3s var(--transition-timing);
-      padding: 32px 24px 100px;
-    }
-
-    /* ===== ANIMATIONS ===== */
-    
-    /* Batch Items - Staggered Fade In */
-    @keyframes fadeInLeft {
-      from {
-        opacity: 0;
-        transform: translateX(-12px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
-    }
-
-    .batch-item {
-      animation: fadeInLeft 0.3s ease forwards !important;
-      opacity: 1 !important;
-    }
-
-    .batch-item:nth-child(1) { animation-delay: 0ms !important; }
-    .batch-item:nth-child(2) { animation-delay: 50ms !important; }
-    .batch-item:nth-child(3) { animation-delay: 100ms !important; }
-    .batch-item:nth-child(4) { animation-delay: 150ms !important; }
-    .batch-item:nth-child(5) { animation-delay: 200ms !important; }
-    .batch-item:nth-child(n+6) { animation-delay: 250ms !important; }
-
-    /* New Batch Button - Pulse Animation on Hover */
-    @keyframes pulse {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.05);
-      }
-      100% {
-        transform: scale(1);
-      }
-    }
-
-    .btn-new-batch:active {
-      animation: pulse 0.6s ease;
-    }
-
-    /* ===== MOBILE RESPONSIVE ===== */
-    @media (max-width: 768px) {
-      body {
-        flex-direction: column;
-      }
-
-      .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100vh;
-        z-index: 200;
-        transform: translateX(-100%);
-        transition: transform 0.3s var(--transition-timing);
-      }
-
-      .sidebar.mobile-open {
-        transform: translateX(0);
-      }
-
-      .sidebar.hidden {
-        transform: translateX(-100%) !important;
-      }
-
-      /* Mobile Overlay/Backdrop */
-      .mobile-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-        z-index: 150;
-      }
-
-      body.mobile-sidebar-open .mobile-overlay {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      .app-wrapper {
-        width: 100%;
-        height: 100vh;
-        margin-left: 0 !important;
-      }
-
-      .header {
-        width: 100%;
-      }
-
-      .main-container {
-        width: 100% !important;
-        margin: 0 !important;
-      }
-    }
-
-    /* ===== REMOVE GRID LAYOUT FROM STYLE.CSS ===== */
-    body.no-grid {
-      display: flex;
-      grid-template-columns: unset;
-      grid-template-rows: unset;
-    }
-
-    .no-grid .sidebar {
-      grid-column: unset;
-      grid-row: unset;
-    }
-
-    .no-grid .header {
-      grid-column: unset;
-      grid-row: unset;
-    }
-
-    .no-grid .main-container {
-      grid-column: unset;
-      grid-row: unset;
-    }
-  </style>
 </head>
-<body class="no-grid">
+<body>
 
   <!-- Splash Screen / Loading Screen -->
   <div class="splash-screen" id="splashScreen">
@@ -403,7 +112,8 @@
     <div class="controls-bar">
       <div class="search-wrap">
         <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Search by NIC, Index, Barcode, name or school..." autocomplete="off"/>
+        <input type="text" id="searchInput" placeholder="Search by NIC, Index, Barcode, name or school..."
+          autocomplete="off" />
       </div>
       <div class="controls-right">
         <button class="btn btn-secondary" id="exportBtn">
@@ -476,7 +186,7 @@
           <div class="toggle-wrap">
             <label class="toggle-label">Top 10</label>
             <div class="toggle-switch">
-              <input type="checkbox" id="top10Toggle" class="toggle-input"/>
+              <input type="checkbox" id="top10Toggle" class="toggle-input" />
               <span class="toggle-slider"></span>
             </div>
           </div>
@@ -508,7 +218,7 @@
             <tr>
               <th class="col-nic">NIC No</th>
               <th class="col-index">Index No.</th>
-              <th class="col-barcode">Barcode No<br/><span class="th-sub">( Physics.lk )</span></th>
+              <th class="col-barcode">Barcode No<br /><span class="th-sub">( Physics.lk )</span></th>
               <th class="col-name">Name</th>
               <th class="col-school">School</th>
               <th class="col-part1">Part 1 Marks</th>
@@ -557,7 +267,8 @@
       <div class="modal-body">
         <div class="form-group">
           <label for="batchNameInput"><i class="fas fa-tag"></i> Batch Name</label>
-          <input type="text" id="batchNameInput" placeholder="e.g. Batch A - Colombo, 2024 Paper 1" autocomplete="off"/>
+          <input type="text" id="batchNameInput" placeholder="e.g. Batch A - Colombo, 2024 Paper 1"
+            autocomplete="off" />
           <span class="field-error" id="errBatchName"></span>
         </div>
       </div>
@@ -582,7 +293,9 @@
         <button class="modal-close" id="deleteBatchClose"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p class="delete-msg">Are you sure you want to permanently delete the batch <strong id="deleteBatchName"></strong>? This will delete all <strong id="deleteBatchStudentCount">0</strong> students in this batch.</p>
+        <p class="delete-msg">Are you sure you want to permanently delete the batch <strong
+            id="deleteBatchName"></strong>? This will delete all <strong id="deleteBatchStudentCount">0</strong>
+          students in this batch.</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="deleteBatchCancelBtn">Cancel</button>
@@ -606,12 +319,12 @@
         <div class="form-row">
           <div class="form-group">
             <label for="inputNIC"><i class="fas fa-id-card"></i> NIC No</label>
-            <input type="text" id="inputNIC" placeholder="e.g. 971234567V" autocomplete="off"/>
+            <input type="text" id="inputNIC" placeholder="e.g. 971234567V" autocomplete="off" />
             <span class="field-error" id="errNIC"></span>
           </div>
           <div class="form-group">
             <label for="inputIndex"><i class="fas fa-barcode"></i> Index No</label>
-            <input type="text" id="inputIndex" placeholder="e.g. 2024/CS/001" autocomplete="off"/>
+            <input type="text" id="inputIndex" placeholder="e.g. 2024/CS/001" autocomplete="off" />
             <span class="field-error" id="errIndex"></span>
           </div>
         </div>
@@ -619,12 +332,12 @@
         <div class="form-row">
           <div class="form-group">
             <label for="inputBarcode"><i class="fas fa-barcode"></i> Barcode No</label>
-            <input type="text" id="inputBarcode" placeholder="e.g. PHY123456" autocomplete="off"/>
+            <input type="text" id="inputBarcode" placeholder="e.g. PHY123456" autocomplete="off" />
             <span class="field-error" id="errBarcode"></span>
           </div>
           <div class="form-group">
             <label for="inputName"><i class="fas fa-user"></i> Name</label>
-            <input type="text" id="inputName" placeholder="Full Name" autocomplete="off"/>
+            <input type="text" id="inputName" placeholder="Full Name" autocomplete="off" />
             <span class="field-error" id="errName"></span>
           </div>
         </div>
@@ -632,12 +345,12 @@
         <div class="form-row">
           <div class="form-group">
             <label for="inputSchool"><i class="fas fa-school"></i> School</label>
-            <input type="text" id="inputSchool" placeholder="School Name" autocomplete="off"/>
+            <input type="text" id="inputSchool" placeholder="School Name" autocomplete="off" />
             <span class="field-error" id="errSchool"></span>
           </div>
           <div class="form-group">
             <label for="inputPart1"><i class="fas fa-circle-dot"></i> Part 1 Marks</label>
-            <input type="number" id="inputPart1" placeholder="0" min="0" max="100"/>
+            <input type="number" id="inputPart1" placeholder="0" min="0" max="100" />
             <span class="field-error" id="errPart1"></span>
           </div>
         </div>
@@ -645,7 +358,7 @@
         <div class="form-row full-row">
           <div class="form-group full-width">
             <label for="inputPart2"><i class="fas fa-pen-nib"></i> Part 2 Marks</label>
-            <input type="number" id="inputPart2" placeholder="0" min="0" max="100"/>
+            <input type="number" id="inputPart2" placeholder="0" min="0" max="100" />
             <span class="field-error" id="errPart2"></span>
           </div>
         </div>
@@ -678,7 +391,8 @@
         <button class="modal-close" id="deleteClose"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p class="delete-msg">Are you sure you want to remove <strong id="deleteStudentName"></strong> from the list?</p>
+        <p class="delete-msg">Are you sure you want to remove <strong id="deleteStudentName"></strong> from the list?
+        </p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="deleteCancelBtn">Cancel</button>
@@ -701,7 +415,8 @@
       <div class="modal-body">
         <p class="grades-info">
           <i class="fas fa-info-circle"></i>
-          Set minimum marks for each grade. When you click "Apply Grades", all students will be graded based on these boundaries.
+          Set minimum marks for each grade. When you click "Apply Grades", all students will be graded based on these
+          boundaries.
         </p>
 
         <div class="grades-grid">
@@ -710,7 +425,7 @@
               <span class="grade-badge grade-A">A</span>
               Minimum Marks for A
             </label>
-            <input type="number" id="gradeAInput" placeholder="e.g., 150" min="0" max="200"/>
+            <input type="number" id="gradeAInput" placeholder="e.g., 150" min="0" max="200" />
           </div>
 
           <div class="grade-input-group">
@@ -718,7 +433,7 @@
               <span class="grade-badge grade-B">B</span>
               Minimum Marks for B
             </label>
-            <input type="number" id="gradeBInput" placeholder="e.g., 120" min="0" max="200"/>
+            <input type="number" id="gradeBInput" placeholder="e.g., 120" min="0" max="200" />
           </div>
 
           <div class="grade-input-group">
@@ -726,7 +441,7 @@
               <span class="grade-badge grade-C">C</span>
               Minimum Marks for C
             </label>
-            <input type="number" id="gradeCInput" placeholder="e.g., 100" min="0" max="200"/>
+            <input type="number" id="gradeCInput" placeholder="e.g., 100" min="0" max="200" />
           </div>
 
           <div class="grade-input-group">
@@ -734,7 +449,7 @@
               <span class="grade-badge grade-D">D</span>
               Minimum Marks for D (or S)
             </label>
-            <input type="number" id="gradeDInput" placeholder="e.g., 70" min="0" max="200"/>
+            <input type="number" id="gradeDInput" placeholder="e.g., 70" min="0" max="200" />
           </div>
         </div>
 
@@ -764,7 +479,8 @@
         <button class="modal-close" id="exportClose"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p class="modal-description">Preview the XML generated from the current table view. When ready, download the file.</p>
+        <p class="modal-description">Preview the XML generated from the current table view. When ready, download the
+          file.</p>
         <pre class="xml-preview" id="exportXmlPreview"></pre>
       </div>
       <div class="modal-footer">
@@ -806,4 +522,5 @@
 
   <script src="script.js"></script>
 </body>
+
 </html>
