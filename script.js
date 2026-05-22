@@ -667,6 +667,7 @@ function addStudent(nic, index, barcode, name, school, part1, part2) {
 
   batch.students.push(student);
   saveData();
+  resetMainContentLayout();
 }
 
 function updateStudent(studentId, nic, index, barcode, name, school, part1, part2) {
@@ -721,6 +722,56 @@ function resetFilters() {
 
 // ===== UI RENDERING =====
 
+const SIDEBAR_WIDTH_OPEN = '260px';
+const SIDEBAR_WIDTH_COLLAPSED = '60px';
+
+function syncSidebarLayout() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+
+  const collapsed = sidebar.classList.contains('collapsed');
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  document.documentElement.style.setProperty(
+    '--sidebar-width',
+    collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_OPEN
+  );
+}
+
+function resetMainContentLayout() {
+  syncSidebarLayout();
+
+  const mc = document.querySelector(
+    '.main-container, .main-content, main, .content-area, #mainContent'
+  );
+  const sidebar = document.getElementById('sidebar');
+  const header = document.querySelector('.header');
+  const tableWrapper = document.querySelector('.table-wrapper');
+  const tableScroll = document.querySelector('.table-scroll');
+  const statsGrid = document.querySelector('.stats-grid');
+  const controlsBar = document.querySelector('.controls-bar');
+
+  [mc, sidebar, header, tableWrapper, tableScroll, statsGrid, controlsBar, document.body].forEach(el => {
+    if (!el) return;
+    el.style.removeProperty('width');
+    el.style.removeProperty('max-width');
+    el.style.removeProperty('margin-left');
+    el.style.removeProperty('min-width');
+    el.style.removeProperty('display');
+    el.style.removeProperty('height');
+    el.style.removeProperty('flex');
+  });
+
+  const layoutEls = [mc, header, tableWrapper, tableScroll, statsGrid, controlsBar];
+  layoutEls.forEach(el => {
+    if (!el) return;
+    el.style.minWidth = '0';
+    el.style.width = '100%';
+    el.style.maxWidth = '100%';
+    el.style.boxSizing = 'border-box';
+  });
+
+}
+
 function renderBatchesList() {
   const list = document.getElementById('batchesList');
   list.innerHTML = '';
@@ -774,6 +825,8 @@ function renderTable() {
 
   if (students.length === 0) {
     emptyState.classList.add('show');
+    updateStats();
+    resetMainContentLayout();
     return;
   }
 
@@ -787,6 +840,8 @@ function renderTable() {
           No students match "<strong>${escHtml(searchQuery)}</strong>"
         </td>
       </tr>`;
+    updateStats();
+    resetMainContentLayout();
     return;
   }
 
@@ -819,6 +874,7 @@ function renderTable() {
   });
 
   updateStats();
+  resetMainContentLayout();
 }
 
 function updateStats() {
@@ -1180,6 +1236,10 @@ function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   sidebar.classList.toggle('collapsed');
   localStorage.setItem('markmaster_sidebar_collapsed', sidebar.classList.contains('collapsed'));
+  resetMainContentLayout();
+  requestAnimationFrame(() => {
+    resetMainContentLayout();
+  });
 }
 
 // ===== THEME MANAGEMENT =====
@@ -1534,9 +1594,13 @@ function setupPersistenceButtons() {
 
 function setupSidebarState() {
   const collapsed = localStorage.getItem('markmaster_sidebar_collapsed') === 'true';
+  const sidebar = document.getElementById('sidebar');
   if (collapsed) {
-    document.getElementById('sidebar').classList.add('collapsed');
+    sidebar.classList.add('collapsed');
+  } else {
+    sidebar.classList.remove('collapsed');
   }
+  resetMainContentLayout();
 }
 
 async function initialize() {
