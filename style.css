@@ -1254,9 +1254,9 @@ body.sidebar-collapsed {
 }
 
 .marks-table {
-  width: 100%;
-  max-width: 100%;
-  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -1276,6 +1276,16 @@ body.sidebar-collapsed {
   white-space: nowrap;
   text-shadow: 0 0 8px rgba(6, 182, 212, 0.6); /* Glow text effect */
 }
+
+.marks-table th.col-nic { min-width: 120px; }
+.marks-table th.col-index { min-width: 110px; }
+.marks-table th.col-barcode { min-width: 130px; }
+.marks-table th.col-name { min-width: 150px; }
+.marks-table th.col-school { min-width: 150px; }
+.marks-table th.col-part1,
+.marks-table th.col-part2 { min-width: 100px; }
+.marks-table th.col-total { min-width: 80px; }
+.marks-table th.col-actions { width: 96px; min-width: 96px; }
 .marks-table th.col-part1,
 .marks-table th.col-part2,
 .marks-table th.col-total {
@@ -1309,7 +1319,12 @@ body.sidebar-collapsed {
   letter-spacing: 0.5px;
   padding: 14px 16px;
 }
-.marks-table td { padding: 16px 20px; vertical-align: middle; font-size: 15px; }
+.marks-table td {
+  padding: 16px 20px;
+  vertical-align: middle;
+  font-size: 15px;
+  white-space: nowrap;
+}
 
 /* Index + Barcode + School */
 .index-badge {
@@ -1339,7 +1354,7 @@ body.sidebar-collapsed {
 .total-low   { color: var(--red); }
 
 /* Action Buttons */
-.col-actions { width: 80px; }
+.col-actions { width: 96px; min-width: 96px; }
 .actions-cell { text-align: center; }
 .action-wrap  { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 

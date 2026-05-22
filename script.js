@@ -284,17 +284,29 @@ async function promptSaveLocation() {
   }
 }
 
-// MANUAL: Export current batch students to JSON file
-async function exportToFile() {
-  const batch = getCurrentBatch();
-  if (!batch) {
-    showToast('No active batch to save', true);
-    return;
-  }
+// ===== BATCH FILE SAVE / LOAD =====
 
-  try {
-    // Export students array with readable format
-    const exportData = batch.students.map(s => ({
+const BATCH_FILE_FORMAT = 'markmaster-batch';
+const BATCH_FILE_VERSION = '1.0';
+
+function sanitizeFileName(name) {
+  return String(name || 'batch')
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^\.+|\.+$/g, '')
+    .slice(0, 80) || 'batch';
+}
+
+function buildBatchExportPayload(batch) {
+  return {
+    format: BATCH_FILE_FORMAT,
+    version: BATCH_FILE_VERSION,
+    exportedAt: new Date().toISOString(),
+    batchName: batch.name,
+    batchId: batch.id,
+    gradeThresholds: { ...batch.gradeThresholds },
+    students: batch.students.map(s => ({
       nic: s.nic,
       index: s.index,
       barcode: s.barcode,
@@ -303,196 +315,250 @@ async function exportToFile() {
       part1: s.part1,
       part2: s.part2,
       total: s.total
-    }));
+    }))
+  };
+}
 
-    // Create blob and download
-    const jsonStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `students_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+function normalizeImportedStudent(raw) {
+  if (!raw || (!raw.nic && !raw.index)) return null;
 
-    showToast(`✓ Exported ${batch.students.length} student(s)!`);
+  const part1 = parseFloat(raw.part1) || 0;
+  const part2 = parseFloat(raw.part2) || 0;
+  const total = raw.total != null ? (parseFloat(raw.total) || part1 + part2) : part1 + part2;
+
+  return {
+    id: genId(),
+    nic: String(raw.nic || '').trim(),
+    index: String(raw.index || '').trim(),
+    barcode: String(raw.barcode || '').trim(),
+    name: String(raw.name || '').trim(),
+    school: String(raw.school || '').trim(),
+    part1,
+    part2,
+    total
+  };
+}
+
+function parseBatchImportFile(parsed) {
+  if (parsed && parsed.format === BATCH_FILE_FORMAT && Array.isArray(parsed.students)) {
+    return {
+      mode: 'replace',
+      students: parsed.students,
+      gradeThresholds: parsed.gradeThresholds,
+      sourceName: parsed.batchName || 'saved batch'
+    };
+  }
+
+  if (Array.isArray(parsed)) {
+    return {
+      mode: 'merge',
+      students: parsed,
+      gradeThresholds: null,
+      sourceName: 'student list'
+    };
+  }
+
+  return null;
+}
+
+function downloadJsonFile(jsonStr, filename) {
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+async function pickJsonFileToRead() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{
+          description: 'MarkMaster Batch / JSON',
+          accept: { 'application/json': ['.json'] }
+        }],
+        multiple: false
+      });
+      const file = await handle.getFile();
+      return { text: await file.text(), name: file.name };
+    } catch (e) {
+      if (e.name === 'AbortError') return null;
+      throw e;
+    }
+  }
+
+  return new Promise(resolve => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      try {
+        resolve({ text: await file.text(), name: file.name });
+      } catch (err) {
+        resolve({ error: err });
+      }
+    };
+    input.click();
+  });
+}
+
+/** Save current batch — pick folder/file location (Save dialog) */
+async function saveBatchToFile() {
+  const batch = getCurrentBatch();
+  if (!batch) {
+    showToast('No active batch to save', true);
+    return;
+  }
+
+  const payload = buildBatchExportPayload(batch);
+  const jsonStr = JSON.stringify(payload, null, 2);
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const suggestedName = `${sanitizeFileName(batch.name)}_students_${dateStr}.json`;
+
+  try {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'MarkMaster Batch',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(jsonStr);
+      await writable.close();
+      showToast(`Saved "${batch.name}" — ${batch.students.length} student(s)`);
+      return;
+    }
+
+    downloadJsonFile(jsonStr, suggestedName);
+    showToast(`Downloaded "${batch.name}" — ${batch.students.length} student(s)`);
   } catch (e) {
-    console.error('Error exporting file:', e);
-    showToast('Error exporting file', true);
+    if (e.name === 'AbortError') return;
+    console.error('Error saving batch file:', e);
+    showToast('Could not save file', true);
   }
 }
 
-// MANUAL: Import students from JSON file (additive/merge)
-async function importFromFile() {
-  try {
-    console.log('🔹 [LOAD] Starting file picker...');
-    
-    // Create file input element
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-
-    input.onchange = async (e) => {
-      try {
-        console.log('🔹 [LOAD] File selected, reading...');
-        
-        const file = e.target.files[0];
-        if (!file) {
-          console.warn('🔹 [LOAD] No file selected');
-          return;
-        }
-
-        // Step 1: Read file
-        console.log(`🔹 [LOAD] Reading file: ${file.name} (${file.size} bytes)`);
-        const text = await file.text();
-        console.log(`🔹 [LOAD] File read complete, length: ${text.length} chars`);
-
-        // Step 2: Parse JSON
-        console.log('🔹 [LOAD] Parsing JSON...');
-        let importedStudents;
-        try {
-          importedStudents = JSON.parse(text);
-        } catch (parseErr) {
-          console.error('❌ [LOAD] JSON parse error:', parseErr);
-          showToast('Error: Invalid JSON format. Make sure the file is valid.', true);
-          input.value = '';
-          return;
-        }
-
-        console.log(`🔹 [LOAD] Parsed successfully. Data type: ${typeof importedStudents}`);
-
-        // Step 3: Validate data structure
-        if (!Array.isArray(importedStudents)) {
-          console.error('❌ [LOAD] Expected array, got:', typeof importedStudents);
-          showToast('Invalid file format. Expected JSON array of students.', true);
-          input.value = '';
-          return;
-        }
-
-        console.log(`🔹 [LOAD] Validated. Array length: ${importedStudents.length} records`);
-
-        // Step 4: Get current batch
-        const batch = getCurrentBatch();
-        if (!batch) {
-          console.error('❌ [LOAD] No active batch found');
-          showToast('No active batch to load data into', true);
-          input.value = '';
-          return;
-        }
-
-        console.log(`🔹 [LOAD] Active batch: "${batch.name}" (${batch.students.length} existing students)`);
-
-        // Step 5: Merge data with duplicate checking
-        const existingStudents = batch.students;
-        let addedCount = 0;
-        let duplicateCount = 0;
-        let skipCount = 0;
-
-        console.log('🔹 [LOAD] Processing imported records...');
-
-        importedStudents.forEach((importedStudent, idx) => {
-          // Validate basic fields
-          if (!importedStudent.nic && !importedStudent.index) {
-            console.warn(`🔹 [LOAD] Record ${idx} skipped: no NIC or Index`);
-            skipCount++;
-            return;
-          }
-
-          // Normalize comparison values (trim and lowercase)
-          const importNic = String(importedStudent.nic || '').trim();
-          const importIndex = String(importedStudent.index || '').trim();
-
-          // Check for duplicates by NIC or Index No
-          const isDuplicate = existingStudents.some(s => {
-            const existingNic = String(s.nic || '').trim();
-            const existingIndex = String(s.index || '').trim();
-            return (importNic && existingNic && existingNic === importNic) ||
-                   (importIndex && existingIndex && existingIndex === importIndex);
-          });
-
-          if (isDuplicate) {
-            console.warn(`🔹 [LOAD] Record ${idx} skipped: duplicate (NIC: ${importNic}, Index: ${importIndex})`);
-            duplicateCount++;
-            return;
-          }
-
-          // Add new student
-          const part1 = parseFloat(importedStudent.part1) || 0;
-          const part2 = parseFloat(importedStudent.part2) || 0;
-          const total = part1 + part2;
-
-          const newStudent = {
-            id: genId(),
-            nic: importNic,
-            index: importIndex,
-            barcode: String(importedStudent.barcode || '').trim(),
-            name: String(importedStudent.name || '').trim(),
-            school: String(importedStudent.school || '').trim(),
-            part1: part1,
-            part2: part2,
-            total: total
-          };
-
-          existingStudents.push(newStudent);
-          console.log(`✓ [LOAD] Record ${idx} added: ${newStudent.name || newStudent.nic} (Total: ${total})`);
-          addedCount++;
-        });
-
-        console.log(`🔹 [LOAD] Merge complete. Added: ${addedCount}, Duplicates: ${duplicateCount}, Skipped: ${skipCount}`);
-
-        // Step 6: Save to localStorage and file
-        if (addedCount > 0) {
-          console.log('🔹 [LOAD] Saving to storage...');
-          saveData();
-          console.log('✓ [LOAD] Saved to storage');
-
-          // Step 7: Re-render UI
-          console.log('🔹 [LOAD] Re-rendering table and stats...');
-          renderUI();
-          console.log('✓ [LOAD] Table and stats re-rendered');
-
-          // Step 8: Show success message
-          let msg = `✓ Loaded ${addedCount} student(s)!`;
-          if (duplicateCount > 0) {
-            msg += ` (${duplicateCount} duplicate(s) skipped)`;
-          }
-          if (skipCount > 0) {
-            msg += ` (${skipCount} invalid records skipped)`;
-          }
-          showToast(msg);
-          console.log('✓ [LOAD] Success message displayed');
-        } else if (duplicateCount > 0) {
-          showToast(`⚠ All records were duplicates. No new students added.`);
-          console.warn('🔹 [LOAD] No records added (all duplicates)');
-        } else if (skipCount > 0) {
-          showToast('No valid students found in file (all records invalid)', true);
-          console.warn('🔹 [LOAD] No valid records found');
-        } else {
-          showToast('No records to load', true);
-          console.warn('🔹 [LOAD] Empty file');
-        }
-
-        // Step 9: Reset file input
-        console.log('🔹 [LOAD] Resetting file input...');
-        input.value = '';
-        console.log('✓ [LOAD] File load complete!');
-
-      } catch (err) {
-        console.error('❌ [LOAD] Unexpected error:', err);
-        console.error('❌ [LOAD] Stack:', err.stack);
-        showToast('Error reading file. Check console for details.', true);
-        input.value = '';
-      }
-    };
-
-    input.click();
-    console.log('✓ [LOAD] File picker opened');
-  } catch (e) {
-    console.error('❌ [LOAD] Error opening file picker:', e);
-    showToast('Error opening file picker', true);
+/** Load batch file into the currently selected batch */
+async function loadBatchFromFile() {
+  const batch = getCurrentBatch();
+  if (!batch) {
+    showToast('Select a batch first, then load a file', true);
+    return;
   }
+
+  try {
+    const picked = await pickJsonFileToRead();
+    if (!picked) return;
+    if (picked.error) throw picked.error;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(picked.text);
+    } catch {
+      showToast('Invalid JSON file', true);
+      return;
+    }
+
+    const imported = parseBatchImportFile(parsed);
+    if (!imported) {
+      showToast('Invalid format. Use a file saved with Save to File.', true);
+      return;
+    }
+
+    const normalized = [];
+    let skipCount = 0;
+    imported.students.forEach(raw => {
+      const student = normalizeImportedStudent(raw);
+      if (student) normalized.push(student);
+      else skipCount++;
+    });
+
+    if (normalized.length === 0) {
+      showToast('No valid student records in file', true);
+      return;
+    }
+
+    if (imported.mode === 'replace') {
+      const msg = batch.students.length > 0
+        ? `Load ${normalized.length} student(s) from "${picked.name}" into "${batch.name}"?\n\nThis will replace the current ${batch.students.length} student(s) in this batch.`
+        : `Load ${normalized.length} student(s) from "${picked.name}" into "${batch.name}"?`;
+
+      if (!confirm(msg)) return;
+
+      batch.students = normalized;
+      if (imported.gradeThresholds && typeof imported.gradeThresholds === 'object') {
+        batch.gradeThresholds = {
+          A: Number(imported.gradeThresholds.A) || batch.gradeThresholds.A,
+          B: Number(imported.gradeThresholds.B) || batch.gradeThresholds.B,
+          C: Number(imported.gradeThresholds.C) || batch.gradeThresholds.C,
+          D: Number(imported.gradeThresholds.D) || batch.gradeThresholds.D
+        };
+      }
+
+      saveData();
+      renderUI();
+      let toastMsg = `Loaded ${normalized.length} student(s) into "${batch.name}"`;
+      if (skipCount > 0) toastMsg += ` (${skipCount} invalid skipped)`;
+      showToast(toastMsg);
+      return;
+    }
+
+    // Legacy plain array: merge without duplicates
+    let addedCount = 0;
+    let duplicateCount = 0;
+    const existing = batch.students;
+
+    normalized.forEach(student => {
+      const isDuplicate = existing.some(s =>
+        (student.nic && s.nic === student.nic) ||
+        (student.index && s.index === student.index)
+      );
+      if (isDuplicate) {
+        duplicateCount++;
+        return;
+      }
+      existing.push(student);
+      addedCount++;
+    });
+
+    if (addedCount === 0) {
+      if (duplicateCount > 0) {
+        showToast('All records already exist in this batch', true);
+      }
+      return;
+    }
+
+    saveData();
+    renderUI();
+    let msg = `Added ${addedCount} student(s) to "${batch.name}"`;
+    if (duplicateCount > 0) msg += ` (${duplicateCount} duplicate(s) skipped)`;
+    if (skipCount > 0) msg += ` (${skipCount} invalid skipped)`;
+    showToast(msg);
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    console.error('Error loading batch file:', e);
+    showToast('Could not load file', true);
+  }
+}
+
+// Backward-compatible aliases
+async function exportToFile() {
+  return saveBatchToFile();
+}
+
+async function importFromFile() {
+  return loadBatchFromFile();
 }
 
 // MANUAL: Create timestamped backup
@@ -1580,11 +1646,11 @@ function setupPersistenceButtons() {
   const backupBtn = document.getElementById('backupBtn');
 
   if (saveFileBtn) {
-    saveFileBtn.addEventListener('click', exportToFile);
+    saveFileBtn.addEventListener('click', saveBatchToFile);
   }
 
   if (loadFileBtn) {
-    loadFileBtn.addEventListener('click', importFromFile);
+    loadFileBtn.addEventListener('click', loadBatchFromFile);
   }
 
   if (backupBtn) {
