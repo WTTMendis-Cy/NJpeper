@@ -1412,11 +1412,6 @@ body.sidebar-collapsed {
   border-radius: 20px;
   width: 100%; max-width: 560px;
   box-shadow: var(--shadow);
-  transform: translateY(20px) scale(0.97);
-  transition: transform 0.25s, opacity 0.25s;
-}
-.modal-overlay.open .modal {
-  transform: translateY(0) scale(1);
 }
 .modal-sm { max-width: 420px; }
 .modal-md { max-width: 720px; }
@@ -1559,4 +1554,55 @@ body.sidebar-collapsed {
   padding: 11px 14px;
   color: var(--text); font-family: var(--font-main); font-size: 14px;
   outline: none;
+}
+
+/* ===== POPUP ANIMATIONS ===== */
+
+/* Base state for all modal content boxes */
+.modal-box,
+.popup-box,
+.modal-content,
+.modal {
+  transform: scale(0);
+  opacity: 0;
+}
+
+/* OPEN: expands from icon */
+.popup-expand {
+  animation: popupOpen 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* CLOSE: shrinks back into icon */
+.popup-shrink {
+  animation: popupClose 0.32s cubic-bezier(0.55, 0, 0.45, 1) forwards;
+}
+
+@keyframes popupOpen {
+  0%   { transform: scale(0.05); opacity: 0; border-radius: 50%; }
+  60%  { opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; border-radius: 16px; }
+}
+
+@keyframes popupClose {
+  0%   { transform: scale(1);    opacity: 1; border-radius: 16px; }
+  40%  { opacity: 0.6; }
+  100% { transform: scale(0.05); opacity: 0; border-radius: 50%; }
+}
+
+/* Backdrop fade */
+.modal-backdrop-fade-in {
+  animation: backdropIn 0.3s ease forwards;
+}
+.modal-backdrop-fade-out {
+  animation: backdropOut 0.3s ease forwards;
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to   { opacity: 1; backdrop-filter: blur(6px); }
+}
+
+@keyframes backdropOut {
+  from { opacity: 1; backdrop-filter: blur(6px); }
+  to   { opacity: 0; backdrop-filter: blur(0px); }
 }
