@@ -16,6 +16,65 @@ let appState = {
 };
 
 let fileSystemHandle = null; // File System Access API handle
+
+// ===== POPUP ANIMATION UTILITIES =====
+
+const modalTriggerMap = new Map();
+
+function openModalFrom(modal, triggerElement) {
+  if (!triggerElement) {
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+    return;
+  }
+
+  const trigger = triggerElement.getBoundingClientRect();
+  const triggerCX = trigger.left + trigger.width / 2;
+  const triggerCY = trigger.top + trigger.height / 2;
+  modalTriggerMap.set(modal, { x: triggerCX, y: triggerCY });
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+
+  const box = modal.querySelector('.modal-box')
+            || modal.querySelector('.popup-box')
+            || modal.querySelector('.modal-content')
+            || modal.firstElementChild;
+
+  const modalRect = modal.getBoundingClientRect();
+  const originX = triggerCX - modalRect.left;
+  const originY = triggerCY - modalRect.top;
+  box.style.transformOrigin = `${originX}px ${originY}px`;
+
+  void box.offsetWidth;
+
+  box.classList.remove('popup-shrink');
+  box.classList.add('popup-expand');
+}
+
+function closeModalTo(modal) {
+  const trigger = modalTriggerMap.get(modal);
+
+  const box = modal.querySelector('.modal-box')
+            || modal.querySelector('.popup-box')
+            || modal.querySelector('.modal-content')
+            || modal.firstElementChild;
+
+  if (trigger && box) {
+    const modalRect = modal.getBoundingClientRect();
+    box.style.transformOrigin = `${trigger.x - modalRect.left}px ${trigger.y - modalRect.top}px`;
+  }
+
+  box.classList.remove('popup-expand');
+  box.classList.add('popup-shrink');
+
+  setTimeout(() => {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+    box.classList.remove('popup-shrink');
+    modalTriggerMap.delete(modal);
+  }, 350);
+}
 let editingId = null;
 let deleteId = null;
 let deleteBatchId = null;
@@ -852,10 +911,10 @@ function renderBatchesList() {
         <div class="batch-item-badge">${batch.students.length}</div>
       </div>
       <div class="batch-item-actions">
-        <button class="batch-item-btn rename" onclick="openRenameBatchModal('${batch.id}')" title="Rename">
+        <button class="batch-item-btn rename" onclick="openRenameBatchModal('${batch.id}', this)" title="Rename">
           <i class="fas fa-pen-to-square"></i>
         </button>
-        <button class="batch-item-btn delete" onclick="openDeleteBatchModal('${batch.id}')" title="Delete">
+        <button class="batch-item-btn delete" onclick="openDeleteBatchModal('${batch.id}', this)" title="Delete">
           <i class="fas fa-trash"></i>
         </button>
       </div>
@@ -927,10 +986,10 @@ function renderTable() {
       <td class="total-cell"><span class="total-value ${totCls}">${student.total}</span></td>
       <td class="actions-cell">
         <div class="action-wrap">
-          <button class="action-btn action-edit" title="Edit" onclick="openEditModal('${student.id}')">
+          <button class="action-btn action-edit" title="Edit" onclick="openEditModal('${student.id}', this)">
             <i class="fas fa-pen"></i>
           </button>
-          <button class="action-btn action-delete" title="Delete" onclick="openDeleteModal('${student.id}')">
+          <button class="action-btn action-delete" title="Delete" onclick="openDeleteModal('${student.id}', this)">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -982,18 +1041,18 @@ function escHtml(str) {
 
 // ===== MODAL FUNCTIONS =====
 
-function openModal() {
-  document.getElementById('modalOverlay').classList.add('open');
+function openModal(triggerEl) {
+  openModalFrom(document.getElementById('modalOverlay'), triggerEl);
 }
 
 function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
+  closeModalTo(document.getElementById('modalOverlay'));
   clearModalErrors();
   resetForm();
   editingId = null;
 }
 
-function openBatchModal(isCreate = true, batchId = null) {
+function openBatchModal(isCreate = true, batchId = null, triggerEl = null) {
   if (!isCreate && batchId) {
     editingBatchId = batchId;
     const batch = appState.batches.find(b => b.id === batchId);
@@ -1010,51 +1069,51 @@ function openBatchModal(isCreate = true, batchId = null) {
   }
 
   document.getElementById('errBatchName').textContent = '';
-  document.getElementById('batchModalOverlay').classList.add('open');
+  openModalFrom(document.getElementById('batchModalOverlay'), triggerEl);
   setTimeout(() => document.getElementById('batchNameInput').focus(), 200);
 }
 
 function closeBatchModal() {
-  document.getElementById('batchModalOverlay').classList.remove('open');
+  closeModalTo(document.getElementById('batchModalOverlay'));
   editingBatchId = null;
 }
 
-function openDeleteBatchModal(batchId) {
+function openDeleteBatchModal(batchId, triggerEl = null) {
   const batch = appState.batches.find(b => b.id === batchId);
   if (!batch) return;
 
   deleteBatchId = batchId;
   document.getElementById('deleteBatchName').textContent = batch.name;
   document.getElementById('deleteBatchStudentCount').textContent = batch.students.length;
-  document.getElementById('deleteBatchOverlay').classList.add('open');
+  openModalFrom(document.getElementById('deleteBatchOverlay'), triggerEl);
 }
 
 function closeDeleteBatchModal() {
-  document.getElementById('deleteBatchOverlay').classList.remove('open');
+  closeModalTo(document.getElementById('deleteBatchOverlay'));
   deleteBatchId = null;
 }
 
-function openDeleteOverlay() {
-  document.getElementById('deleteOverlay').classList.add('open');
+function openDeleteOverlay(triggerEl = null) {
+  openModalFrom(document.getElementById('deleteOverlay'), triggerEl);
 }
 
 function closeDeleteOverlay() {
-  document.getElementById('deleteOverlay').classList.remove('open');
+  closeModalTo(document.getElementById('deleteOverlay'));
   deleteId = null;
 }
 
-function openGradesModal() {
+function openGradesModal(triggerEl = null) {
   const boundaries = getCurrentGradeBoundaries();
   document.getElementById('gradeAInput').value = boundaries.A;
   document.getElementById('gradeBInput').value = boundaries.B;
   document.getElementById('gradeCInput').value = boundaries.C;
   document.getElementById('gradeDInput').value = boundaries.D;
   updateBoundariesDisplay();
-  document.getElementById('gradesOverlay').classList.add('open');
+  openModalFrom(document.getElementById('gradesOverlay'), triggerEl);
 }
 
 function closeGradesModal() {
-  document.getElementById('gradesOverlay').classList.remove('open');
+  closeModalTo(document.getElementById('gradesOverlay'));
 }
 
 function updateBoundariesDisplay() {
@@ -1089,17 +1148,17 @@ function applyGradeBoundaries() {
   showToast('Grade boundaries updated.');
 }
 
-function openAddModal() {
+function openAddModal(triggerEl = null) {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'Add Student';
   document.getElementById('saveBtnText').textContent = 'Add Student';
   document.getElementById('modalIcon').className = 'fas fa-user-plus';
   resetForm();
-  openModal();
+  openModal(triggerEl);
   setTimeout(() => document.getElementById('inputNIC').focus(), 200);
 }
 
-function openEditModal(id) {
+function openEditModal(id, triggerEl = null) {
   const student = getCurrentBatchStudents().find(s => s.id === id);
   if (!student) return;
 
@@ -1117,17 +1176,17 @@ function openEditModal(id) {
   document.getElementById('inputPart2').value = student.part2;
 
   updatePreview();
-  openModal();
+  openModal(triggerEl);
   setTimeout(() => document.getElementById('inputName').focus(), 200);
 }
 
-function openDeleteModal(id) {
+function openDeleteModal(id, triggerEl = null) {
   const student = getCurrentBatchStudents().find(s => s.id === id);
   if (!student) return;
 
   deleteId = id;
   document.getElementById('deleteStudentName').textContent = student.name;
-  openDeleteOverlay();
+  openDeleteOverlay(triggerEl);
 }
 
 function resetForm() {
@@ -1339,8 +1398,8 @@ function switchBatchAndRender(batchId) {
   renderUI();
 }
 
-function openRenameBatchModal(batchId) {
-  openBatchModal(false, batchId);
+function openRenameBatchModal(batchId, triggerEl = null) {
+  openBatchModal(false, batchId, triggerEl);
 }
 
 // ===== EXPORT FUNCTIONS =====
@@ -1565,7 +1624,9 @@ function setupFormEnterSubmit() {
 }
 
 function setupGradeModalEvents() {
-  document.getElementById('gradesBtn').addEventListener('click', openGradesModal);
+  document.getElementById('gradesBtn').addEventListener('click', function(e) {
+    openGradesModal(e.currentTarget);
+  });
   document.getElementById('gradesClose').addEventListener('click', closeGradesModal);
   document.getElementById('gradesCancelBtn').addEventListener('click', closeGradesModal);
   document.getElementById('applyGradesBtn').addEventListener('click', applyGradeBoundaries);
@@ -1594,7 +1655,9 @@ function setupModalEvents() {
 }
 
 function setupBatchModalEvents() {
-  document.getElementById('newBatchBtn').addEventListener('click', () => openBatchModal(true));
+  document.getElementById('newBatchBtn').addEventListener('click', function(e) {
+    openBatchModal(true, null, e.currentTarget);
+  });
   document.getElementById('batchModalClose').addEventListener('click', closeBatchModal);
   document.getElementById('batchCancelBtn').addEventListener('click', closeBatchModal);
   document.getElementById('saveBatchBtn').addEventListener('click', saveBatch);
@@ -1626,7 +1689,9 @@ function setupInputPreview() {
 
 function setupButtons() {
   document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
-  document.getElementById('addStudentBtn').addEventListener('click', openAddModal);
+  document.getElementById('addStudentBtn').addEventListener('click', function(e) {
+    openAddModal(e.currentTarget);
+  });
   document.getElementById('sortViewBtn').addEventListener('click', toggleSortView);
   document.getElementById('exportBtn').addEventListener('click', exportCSV);
   document.getElementById('deleteAllBtn').addEventListener('click', clearAllData);
