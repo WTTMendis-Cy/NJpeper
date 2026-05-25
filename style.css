@@ -1081,6 +1081,18 @@ body.sidebar-collapsed {
 }
 .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
 
+.btn-excel {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--green);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.btn-excel:hover {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+  transform: translateY(-1px);
+}
+
 /* UPDATED: "Clear Table" Button Downsized */
 .btn-tertiary {
   background: rgba(239,68,68,0.05);
@@ -1277,15 +1289,6 @@ body.sidebar-collapsed {
   text-shadow: 0 0 8px rgba(6, 182, 212, 0.6); /* Glow text effect */
 }
 
-.marks-table th.col-nic { min-width: 120px; }
-.marks-table th.col-index { min-width: 110px; }
-.marks-table th.col-barcode { min-width: 130px; }
-.marks-table th.col-name { min-width: 150px; }
-.marks-table th.col-school { min-width: 150px; }
-.marks-table th.col-part1,
-.marks-table th.col-part2 { min-width: 100px; }
-.marks-table th.col-total { min-width: 80px; }
-.marks-table th.col-actions { width: 96px; min-width: 96px; }
 .marks-table th.col-part1,
 .marks-table th.col-part2,
 .marks-table th.col-total {
@@ -1311,7 +1314,9 @@ body.sidebar-collapsed {
 .marks-table tbody tr:hover { background: rgba(59,130,246,0.05); }
 .marks-table tbody tr:last-child { border-bottom: none; }
 
-.marks-table { font-size: 15px; }
+.marks-table td {
+  font-size: 15px;
+}
 .marks-table th {
   font-size: 13px;
   font-weight: 700;
@@ -1353,29 +1358,61 @@ body.sidebar-collapsed {
 .total-mid   { color: var(--gold); }
 .total-low   { color: var(--red); }
 
-/* Action Buttons */
-.col-actions { width: 96px; min-width: 96px; }
-.actions-cell { text-align: center; }
-.action-wrap  { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+/* -- Row Action Info (inside modal) ----------- */
+.row-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rai-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text2);
+}
+.rai-field span {
+  min-width: 64px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+.rai-field strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.rai-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 11px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.rai-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(74,144,226,0.2);
+}
+.rai-input-num {
+  max-width: 100px;
+  text-align: center;
+}
+#raiTotalDisplay {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+}
 
-.action-btn {
-  width: 30px; height: 30px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  border: none; cursor: pointer;
-  font-size: 12px; transition: all 0.2s;
+/* Row click cursor */
+#tableBody tr {
+  cursor: pointer;
 }
-.action-edit {
-  background: rgba(59,130,246,0.12); color: var(--blue);
-  border: 1px solid rgba(59,130,246,0.2);
-}
-.action-edit:hover { background: var(--blue); color: #fff; transform: scale(1.1); }
-
-.action-delete {
-  width: 28px; height: 28px;
-  background: rgba(239,68,68,0.12); color: var(--red);
-  border: 1px solid rgba(239,68,68,0.2);
-}
-.action-delete:hover { background: var(--red); color: #fff; transform: scale(1.1); }
 
 /* -- Empty State ----------------------------- */
 .empty-state {
@@ -1605,4 +1642,99 @@ body.sidebar-collapsed {
 @keyframes backdropOut {
   from { opacity: 1; backdrop-filter: blur(6px); }
   to   { opacity: 0; backdrop-filter: blur(0px); }
+}
+
+/* ===== TOGGLE SWITCH ===== */
+.toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.toggle-label {
+  font-size: 12px;
+  color: var(--text3);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.toggle-label i {
+  font-size: 13px;
+}
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 2px;
+  top: 2px;
+  background: var(--text3);
+  border-radius: 50%;
+  transition: all 0.25s ease;
+}
+.toggle-input:checked + .toggle-slider {
+  background: var(--blue-glow);
+  border-color: var(--blue);
+}
+.toggle-input:checked + .toggle-slider::before {
+  background: var(--blue);
+  transform: translateX(16px);
+}
+
+/* ===== FONT SIZE DROPDOWN ===== */
+.fs-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.fs-control i {
+  font-size: 12px;
+  color: var(--text3);
+}
+.fs-control select {
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 0;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 52px;
+}
+.fs-control select:hover {
+  color: var(--text);
+}
+.fs-control select option {
+  background: var(--bg2);
+  color: var(--text);
 }

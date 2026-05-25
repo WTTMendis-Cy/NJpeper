@@ -23,8 +23,20 @@ const modalTriggerMap = new Map();
 
 function openModalFrom(modal, triggerElement) {
   if (!triggerElement) {
-    modal.classList.add('open');
     modal.style.display = 'flex';
+    modal.classList.add('open');
+
+    const box = modal.querySelector('.modal-box')
+              || modal.querySelector('.popup-box')
+              || modal.querySelector('.modal-content')
+              || modal.firstElementChild;
+
+    box.style.transform = 'scale(1)';
+    box.style.opacity = '1';
+    box.style.borderRadius = '16px';
+
+    box.classList.remove('popup-shrink');
+    box.classList.remove('popup-expand');
     return;
   }
 
@@ -82,6 +94,7 @@ let editingBatchId = null;
 let searchQuery = '';
 let showTop10 = false;
 let sortByRank = false;
+let tableFontSize = 15;
 
 // ===== SPLASH SCREEN INITIALIZATION =====
 
@@ -653,6 +666,122 @@ async function createBackup() {
   }
 }
 
+// ===== EXCEL UPLOAD =====
+
+function uploadExcel() {
+  const batch = getCurrentBatch();
+  if (!batch) {
+    showToast('Select a batch first, then upload Excel', true);
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xlsx,.xls,.csv';
+  input.onchange = async function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (!json || json.length === 0) {
+        showToast('Excel sheet is empty', true);
+        return;
+      }
+
+      // Normalise column headers — map to expected keys
+      const headerMap = {};
+      const keys = Object.keys(json[0]);
+      const columnAliases = {
+        nic: ['nic', 'nic no', 'nic number', 'nic no.', 'nic #', 'nic#', 'nic_no', 'student nic'],
+        index: ['index', 'index no', 'index number', 'index no.', 'index #', 'index#', 'index_no', 'student index'],
+        barcode: ['barcode', 'barcode no', 'barcode number', 'barcode no.', 'barcode #', 'barcode#', 'barcode_no'],
+        name: ['name', 'student name', 'full name', 'student_name', 'fullname'],
+        school: ['school', 'school name', 'school_name'],
+        part1: ['part 1', 'part1', 'part 1 marks', 'marks part 1', 'part1 marks', 'part_1', 'part1_marks'],
+        part2: ['part 2', 'part2', 'part 2 marks', 'marks part 2', 'part2 marks', 'part_2', 'part2_marks']
+      };
+
+      keys.forEach(key => {
+        const lower = key.trim().toLowerCase();
+        for (const [field, aliases] of Object.entries(columnAliases)) {
+          if (aliases.includes(lower)) {
+            headerMap[key] = field;
+            break;
+          }
+        }
+      });
+
+      // Validate we have at least name or nic
+      const mappedFields = new Set(Object.values(headerMap));
+      if (!mappedFields.has('name') && !mappedFields.has('nic') && !mappedFields.has('index')) {
+        showToast('Could not find required columns (NIC, Index, or Name) in Excel', true);
+        return;
+      }
+
+      const existingStudents = batch.students;
+      let addedCount = 0;
+      let emptyCount = 0;
+      let dupCount = 0;
+
+      json.forEach(row => {
+        const mapped = {};
+        for (const [key, field] of Object.entries(headerMap)) {
+          mapped[field] = String(row[key] || '').trim();
+        }
+
+        const nic = mapped.nic || '';
+        const index = mapped.index || '';
+        const barcode = mapped.barcode || '';
+        const name = mapped.name || '';
+        const school = mapped.school || '';
+        const part1 = parseFloat(mapped.part1) || 0;
+        const part2 = parseFloat(mapped.part2) || 0;
+
+        // Skip row if no identifying data
+        if (!nic && !index && !name) { emptyCount++; return; }
+
+        // Skip duplicates (check by nic or index)
+        const isDup = existingStudents.some(s =>
+          (nic && s.nic === nic) || (index && s.index === index)
+        );
+        if (isDup) { dupCount++; return; }
+
+        const total = part1 + part2;
+        existingStudents.push({
+          id: genId(),
+          nic, index, barcode, name, school,
+          part1, part2, total
+        });
+        addedCount++;
+      });
+
+      if (addedCount === 0) {
+        let msg = 'No new students added';
+        if (dupCount > 0) msg += ` (${dupCount} duplicate(s) skipped)`;
+        if (emptyCount > 0) msg += ` (${emptyCount} empty row(s) skipped)`;
+        showToast(msg, true);
+        return;
+      }
+
+      saveData();
+      renderUI();
+      let msg = `Added ${addedCount} student(s) from Excel`;
+      if (dupCount > 0) msg += ` (${dupCount} duplicate(s) skipped)`;
+      if (emptyCount > 0) msg += ` (${emptyCount} empty row(s) skipped)`;
+      showToast(msg);
+    } catch (err) {
+      console.error('Excel upload error:', err);
+      showToast('Failed to read Excel file. Make sure it is a valid .xlsx file.', true);
+    }
+  };
+  input.click();
+}
+
 // Fallback: Download as JSON (for browsers without File System API)
 function downloadAsJSON() {
   const dataStr = JSON.stringify(appState, null, 2);
@@ -960,7 +1089,7 @@ function renderTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" style="text-align:center;padding:48px;color:var(--text3);">
+        <td colspan="8" style="text-align:center;padding:48px;color:var(--text3);">
           <i class="fas fa-search" style="margin-right:8px;"></i>
           No students match "<strong>${escHtml(searchQuery)}</strong>"
         </td>
@@ -974,6 +1103,7 @@ function renderTable() {
     const totCls = totalClass(student.total);
     const animDelay = idx * 40;
     const tr = document.createElement('tr');
+    tr.dataset.id = student.id;
     tr.style.animationDelay = `${animDelay}ms`;
     tr.innerHTML = `
       <td><span class="index-badge">${escHtml(student.nic)}</span></td>
@@ -984,22 +1114,114 @@ function renderTable() {
       <td class="mark-cell"><span class="mark-value">${student.part1}</span></td>
       <td class="mark-cell"><span class="mark-value">${student.part2}</span></td>
       <td class="total-cell"><span class="total-value ${totCls}">${student.total}</span></td>
-      <td class="actions-cell">
-        <div class="action-wrap">
-          <button class="action-btn action-edit" title="Edit" onclick="openEditModal('${student.id}', this)">
-            <i class="fas fa-pen"></i>
-          </button>
-          <button class="action-btn action-delete" title="Delete" onclick="openDeleteModal('${student.id}', this)">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      </td>
     `;
     tbody.appendChild(tr);
   });
 
   updateStats();
   resetMainContentLayout();
+}
+
+// ===== ROW ACTION MODAL =====
+
+let rowActionStudentId = null;
+
+function openRowActionModal(studentId, triggerEl) {
+  rowActionStudentId = studentId;
+  const student = getCurrentBatchStudents().find(s => s.id === studentId);
+  if (!student) return;
+
+  document.getElementById('rowActionTitle').textContent = escHtml(student.name);
+  document.getElementById('raiInputNic').value = student.nic || '';
+  document.getElementById('raiInputIndex').value = student.index || '';
+  document.getElementById('raiInputBarcode').value = student.barcode || '';
+  document.getElementById('raiInputName').value = student.name || '';
+  document.getElementById('raiInputSchool').value = student.school || '';
+  document.getElementById('raiInputPart1').value = student.part1;
+  document.getElementById('raiInputPart2').value = student.part2;
+  updateRaiTotal();
+
+  openModalFrom(document.getElementById('rowActionOverlay'), triggerEl);
+  setTimeout(() => document.getElementById('raiInputName').focus(), 250);
+}
+
+function updateRaiTotal() {
+  const p1 = parseFloat(document.getElementById('raiInputPart1').value) || 0;
+  const p2 = parseFloat(document.getElementById('raiInputPart2').value) || 0;
+  document.getElementById('raiTotalDisplay').textContent = p1 + p2;
+}
+
+function closeRowActionModal() {
+  closeModalTo(document.getElementById('rowActionOverlay'));
+  rowActionStudentId = null;
+}
+
+function setupRowClick() {
+  const tbody = document.getElementById('tableBody');
+  if (!tbody) return;
+
+  tbody.addEventListener('click', function (e) {
+    const tr = e.target.closest('tr');
+    if (!tr || !tr.dataset.id) return;
+    if (tr.closest('.empty-state')) return;
+    openRowActionModal(tr.dataset.id, tr);
+  });
+}
+
+function setupRowActionModal() {
+  document.getElementById('rowActionClose')?.addEventListener('click', closeRowActionModal);
+  document.getElementById('rowActionCancel')?.addEventListener('click', closeRowActionModal);
+  document.getElementById('rowActionOverlay')?.addEventListener('click', function (e) {
+    if (e.target === this) closeRowActionModal();
+  });
+
+  document.getElementById('raiInputPart1')?.addEventListener('input', updateRaiTotal);
+  document.getElementById('raiInputPart2')?.addEventListener('input', updateRaiTotal);
+
+  document.getElementById('rowActionSave')?.addEventListener('click', function () {
+    const id = rowActionStudentId;
+    if (!id) return;
+    const batch = getCurrentBatch();
+    if (!batch) return;
+    const idx = batch.students.findIndex(s => s.id === id);
+    if (idx === -1) return;
+
+    const nic = document.getElementById('raiInputNic').value.trim();
+    const index = document.getElementById('raiInputIndex').value.trim();
+    const barcode = document.getElementById('raiInputBarcode').value.trim();
+    const name = document.getElementById('raiInputName').value.trim();
+    const school = document.getElementById('raiInputSchool').value.trim();
+    const p1 = parseFloat(document.getElementById('raiInputPart1').value) || 0;
+    const p2 = parseFloat(document.getElementById('raiInputPart2').value) || 0;
+
+    if (!name) {
+      showToast('Name is required', true);
+      return;
+    }
+
+    batch.students[idx] = {
+      ...batch.students[idx],
+      nic, index, barcode, name, school,
+      part1: p1, part2: p2,
+      total: p1 + p2
+    };
+
+    saveData();
+    renderTable();
+    updateStats();
+    closeRowActionModal();
+    showToast('Student updated');
+  });
+
+  document.getElementById('rowActionDelete')?.addEventListener('click', function () {
+    const id = rowActionStudentId;
+    if (!id) return;
+    deleteStudentFromBatch(id);
+    renderTable();
+    updateStats();
+    closeRowActionModal();
+    showToast('Student deleted', true);
+  });
 }
 
 function updateStats() {
@@ -1429,7 +1651,7 @@ function getXmlExportString() {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<students>${rows}\n</students>`;
 }
 
-function exportCSV() {
+async function exportSpreadsheet() {
   const students = getCurrentBatchStudents();
   if (students.length === 0) {
     showToast('No students to export!', true);
@@ -1439,31 +1661,45 @@ function exportCSV() {
   const visible = getVisibleStudents();
   const batch = getCurrentBatch();
 
-  const header = ['NIC No', 'Index No.', 'Barcode No', 'Name', 'School', 'Part 1 Marks', 'Part 2 Marks', 'Total'];
-  const rows = visible.map(student => [
-    student.nic,
-    student.index,
-    student.barcode,
-    student.name,
-    student.school,
-    student.part1,
-    student.part2,
-    student.total
-  ]);
+  const data = [
+    ['NIC No', 'Index No.', 'Barcode No', 'Name', 'School', 'Part 1 Marks', 'Part 2 Marks', 'Total'],
+    ...visible.map(s => [s.nic, s.index, s.barcode, s.name, s.school, s.part1, s.part2, s.total])
+  ];
 
-  const csv = [header, ...rows]
-    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    .join('\n');
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, batch ? batch.name.slice(0, 31) : 'Students');
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const batchName = batch ? batch.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'batch';
-  a.download = `${batchName}_${sortByRank ? 'rank' : 'index'}_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('CSV exported!');
+  const suggestedName = batch
+    ? `${batch.name.replace(/[<>:"/\\|?*]/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    : `students_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+  try {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{ description: 'Excel Workbook', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(wbout);
+      await writable.close();
+    } else {
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = suggestedName;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    showToast('Spreadsheet downloaded!');
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error('Export error:', e);
+      showToast('Could not save file', true);
+    }
+  }
 }
 
 function exportAllBatches() {
@@ -1646,6 +1882,45 @@ function setupSearchAndFilter() {
   });
 }
 
+function setupFontSizeControl() {
+  const sel = document.getElementById('fontSizeSelect');
+  if (!sel) return;
+
+  const saved = localStorage.getItem('markmaster_table_fs');
+  if (saved) sel.value = saved;
+
+  applyTableFontSize(parseInt(sel.value, 10));
+
+  sel.addEventListener('change', function () {
+    const size = parseInt(this.value, 10);
+    localStorage.setItem('markmaster_table_fs', size);
+    applyTableFontSize(size);
+  });
+}
+
+function applyTableFontSize(px) {
+  const existing = document.getElementById('fs-dynamic-style');
+  if (existing) existing.remove();
+
+  const style = document.createElement('style');
+  style.id = 'fs-dynamic-style';
+  style.textContent = `
+    .marks-table td,
+    .marks-table th,
+    .index-badge,
+    .student-name,
+    .mark-value,
+    .total-value {
+      font-size: ${px}px !important;
+    }
+    .marks-table td,
+    .marks-table th {
+      padding: ${Math.round(px * 0.65)}px ${Math.round(px * 0.85)}px !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function setupModalEvents() {
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('cancelBtn').addEventListener('click', closeModal);
@@ -1693,7 +1968,7 @@ function setupButtons() {
     openAddModal(e.currentTarget);
   });
   document.getElementById('sortViewBtn').addEventListener('click', toggleSortView);
-  document.getElementById('exportBtn').addEventListener('click', exportCSV);
+  document.getElementById('exportBtn').addEventListener('click', exportSpreadsheet);
   document.getElementById('deleteAllBtn').addEventListener('click', clearAllData);
   document.getElementById('saveBtn').addEventListener('click', saveStudent);
   
@@ -1705,21 +1980,9 @@ function setupButtons() {
 }
 
 function setupPersistenceButtons() {
-  // Set up new persistence buttons
-  const saveFileBtn = document.getElementById('saveFileBtn');
-  const loadFileBtn = document.getElementById('loadFileBtn');
-  const backupBtn = document.getElementById('backupBtn');
-
-  if (saveFileBtn) {
-    saveFileBtn.addEventListener('click', saveBatchToFile);
-  }
-
-  if (loadFileBtn) {
-    loadFileBtn.addEventListener('click', loadBatchFromFile);
-  }
-
-  if (backupBtn) {
-    backupBtn.addEventListener('click', createBackup);
+  const excelUploadBtn = document.getElementById('excelUploadBtn');
+  if (excelUploadBtn) {
+    excelUploadBtn.addEventListener('click', uploadExcel);
   }
 }
 
@@ -1747,7 +2010,10 @@ async function initialize() {
   setupDeleteEvents();
   setupInputPreview();
   setupFormEnterSubmit();
+  setupRowClick();
+  setupRowActionModal();
   setupSearchAndFilter();
+  setupFontSizeControl();
   setupGradeModalEvents();
   setupPersistenceButtons();
 
@@ -1759,6 +2025,7 @@ async function initialize() {
       closeGradesModal();
       closeBatchModal();
       closeDeleteBatchModal();
+      closeRowActionModal();
     }
   });
 }
