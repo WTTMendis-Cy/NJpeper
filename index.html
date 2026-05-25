@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -105,16 +106,10 @@
       </div>
       <div class="controls-right">
         <button class="btn btn-secondary" id="exportBtn">
-          <i class="fas fa-download"></i> Export CSV
+          <i class="fas fa-download"></i> Download Spreadsheet
         </button>
-        <button class="btn btn-secondary btn-sm" id="saveFileBtn" title="Save this batch to a JSON file (choose location)">
-          <i class="fas fa-floppy-disk"></i> Save to File
-        </button>
-        <button class="btn btn-secondary btn-sm" id="loadFileBtn" title="Load a saved batch file into the current batch">
-          <i class="fas fa-folder-open"></i> Load File
-        </button>
-        <button class="btn btn-secondary btn-sm" id="backupBtn" title="Create backup">
-          <i class="fas fa-shield-halved"></i> Backup
+        <button class="btn btn-excel btn-sm" id="excelUploadBtn" title="Upload Excel sheet to fill table">
+          <i class="fas fa-file-excel"></i> Upload Excel
         </button>
         <button class="btn btn-secondary btn-sm btn-tertiary" id="deleteAllBtn">
           <i class="fas fa-trash-alt"></i> Clear Table
@@ -178,6 +173,18 @@
               <span class="toggle-slider"></span>
             </div>
           </div>
+          <div class="fs-control" title="Table Font Size">
+            <i class="fas fa-font"></i>
+            <select id="fontSizeSelect">
+              <option value="12">12px</option>
+              <option value="13">13px</option>
+              <option value="14">14px</option>
+              <option value="15" selected>15px</option>
+              <option value="16">16px</option>
+              <option value="18">18px</option>
+              <option value="20">20px</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -212,7 +219,6 @@
               <th class="col-part1">Part 1 Marks</th>
               <th class="col-part2">Part 2 Marks</th>
               <th class="col-total">Total</th>
-              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -469,6 +475,62 @@
         <button class="btn btn-primary" id="confirmExportXmlBtn">
           <i class="fas fa-download"></i> Download XML
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROW ACTION MODAL ============ -->
+  <div class="modal-overlay" id="rowActionOverlay">
+    <div class="modal" id="rowActionModal" style="max-width:520px">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon"><i class="fas fa-user"></i></div>
+          <h2 id="rowActionTitle">Student</h2>
+        </div>
+        <button class="modal-close" id="rowActionClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="row-action-info" id="rowActionInfo">
+          <div class="rai-field">
+            <span>NIC</span>
+            <input type="text" class="rai-input" id="raiInputNic" placeholder="NIC No">
+          </div>
+          <div class="rai-field">
+            <span>Index</span>
+            <input type="text" class="rai-input" id="raiInputIndex" placeholder="Index No">
+          </div>
+          <div class="rai-field">
+            <span>Barcode</span>
+            <input type="text" class="rai-input" id="raiInputBarcode" placeholder="Barcode No">
+          </div>
+          <div class="rai-field">
+            <span>Name</span>
+            <input type="text" class="rai-input" id="raiInputName" placeholder="Full Name">
+          </div>
+          <div class="rai-field">
+            <span>School</span>
+            <input type="text" class="rai-input" id="raiInputSchool" placeholder="School Name">
+          </div>
+          <div style="display:flex;gap:12px">
+            <div class="rai-field" style="flex:1">
+              <span>Part 1</span>
+              <input type="number" class="rai-input rai-input-num" id="raiInputPart1" placeholder="0" min="0" max="100">
+            </div>
+            <div class="rai-field" style="flex:1">
+              <span>Part 2</span>
+              <input type="number" class="rai-input rai-input-num" id="raiInputPart2" placeholder="0" min="0" max="100">
+            </div>
+          </div>
+          <div class="rai-field">
+            <span>Total</span>
+            <strong id="raiTotalDisplay">0</strong>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="rowActionCancel">Cancel</button>
+        <button class="btn btn-primary" id="rowActionSave"><i class="fas fa-check"></i> Save Changes</button>
+        <button class="btn btn-danger" id="rowActionDelete"><i class="fas fa-trash"></i> Delete</button>
       </div>
     </div>
   </div>
